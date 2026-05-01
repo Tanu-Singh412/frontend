@@ -35,7 +35,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 
-const API = "https://fullstack-project-1-n510.onrender.com/api/estimate";
+const API = "https://full-stack-project-r5o9.vercel.app/api/estimate";
 
 export default function EstimatePage() {
   const [form, setForm] = useState({

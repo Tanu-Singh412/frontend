@@ -20,7 +20,7 @@ function ProjectsOverview() {
 
   useEffect(() => {
     const loadProjects = async () => {
-      const res = await fetch("https://fullstack-project-1-n510.onrender.com/api/projects");
+      const res = await fetch("https://full-stack-project-r5o9.vercel.app/api/projects");
 
       const data = await res.json();
 

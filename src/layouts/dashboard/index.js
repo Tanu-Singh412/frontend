@@ -71,16 +71,16 @@ function Dashboard() {
   const [counts, setCounts] = useState({ clients: 0, projects: 0, invoices: 0, vendors: 0 });
 
   useEffect(() => {
-    fetch("https://fullstack-project-1-n510.onrender.com/api/clients")
+    fetch("https://full-stack-project-r5o9.vercel.app/api/clients")
       .then(r => r.json()).then(d => setCounts(p => ({ ...p, clients: d.length }))).catch(() => { });
 
-    fetch("https://fullstack-project-1-n510.onrender.com/api/projects")
+    fetch("https://full-stack-project-r5o9.vercel.app/api/projects")
       .then(r => r.json()).then(d => setCounts(p => ({ ...p, projects: d.length }))).catch(() => { });
 
-    fetch("https://fullstack-project-1-n510.onrender.com/api/invoices")
+    fetch("https://full-stack-project-r5o9.vercel.app/api/invoices")
       .then(r => r.json()).then(d => setCounts(p => ({ ...p, invoices: d.length || d.data?.length || 0 }))).catch(() => { });
 
-    fetch("https://fullstack-project-1-n510.onrender.com/api/vendors")
+    fetch("https://full-stack-project-r5o9.vercel.app/api/vendors")
       .then(r => r.json()).then(d => setCounts(p => ({ ...p, vendors: d.length || d.data?.length || 0 }))).catch(() => { });
   }, []);
 

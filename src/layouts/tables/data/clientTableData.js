@@ -52,7 +52,7 @@ export default function useClientTableData() {
   const loadData = useCallback(async () => {
     try {
       const res = await fetch(
-        "https://fullstack-project-1-n510.onrender.com/api/clients",
+        "https://full-stack-project-r5o9.vercel.app/api/clients",
       );
       const data = await res.json();
       setClients(data);
@@ -71,7 +71,7 @@ export default function useClientTableData() {
     if (!clientToUpdate) return;
 
     await fetch(
-      `https://fullstack-project-1-n510.onrender.com/api/clients/${id}`,
+      `https://full-stack-project-r5o9.vercel.app/api/clients/${id}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -84,7 +84,7 @@ export default function useClientTableData() {
   const deleteClient = async (id) => {
     try {
       await fetch(
-        `https://fullstack-project-1-n510.onrender.com/api/clients/${id}`,
+        `https://full-stack-project-r5o9.vercel.app/api/clients/${id}`,
         {
           method: "DELETE",
         },

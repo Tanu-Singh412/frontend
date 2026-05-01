@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import DeleteIcon from "@mui/icons-material/Delete";
-const Base_API = "https://fullstack-project-1-n510.onrender.com/api";
+const Base_API = "https://full-stack-project-r5o9.vercel.app/api";
 
 function ProjectDetails() {
   const { state } = useLocation();

@@ -16,7 +16,7 @@ connectDB();
 
 // Middleware
 app.use(cors({
-  origin: "https://fullstack-frontend-4-ym5y.onrender.com",
+  origin: "https://frontend-navy-iota-27.vercel.app",
   credentials: true,
 }));
 app.use(express.json({ limit: "50mb" }));

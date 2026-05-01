@@ -58,7 +58,7 @@ export default function useProjectData() {
   const handleStatusChange = useCallback(async (id, value) => {
     setProjects((prev) => prev.map((p) => (p._id === id ? { ...p, status: value } : p)));
 
-    await fetch(`https://fullstack-project-1-n510.onrender.com/api/projects/${id}`, {
+    await fetch(`https://full-stack-project-r5o9.vercel.app/api/projects/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: value }),
@@ -67,14 +67,14 @@ export default function useProjectData() {
 
   // Load projects from backend
   const loadData = useCallback(async () => {
-    const res = await fetch("https://fullstack-project-1-n510.onrender.com/api/projects");
+    const res = await fetch("https://full-stack-project-r5o9.vercel.app/api/projects");
     const data = await res.json();
     setProjects(data);
   }, []);
 
   // Delete project
   const deleteProject = useCallback(async (id) => {
-    await fetch(`https://fullstack-project-1-n510.onrender.com/api/projects/${id}`, {
+    await fetch(`https://full-stack-project-r5o9.vercel.app/api/projects/${id}`, {
       method: "DELETE",
     });
     loadData();

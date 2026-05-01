@@ -63,7 +63,7 @@ function AddClient() {
       }
 
       // CHECK UNIQUE NAME
-      const resExisting = await fetch("https://fullstack-project-1-n510.onrender.com/api/clients");
+      const resExisting = await fetch("https://full-stack-project-r5o9.vercel.app/api/clients");
       const existingClients = await resExisting.json();
 
       const isDuplicate = existingClients.some(c =>
@@ -77,7 +77,7 @@ function AddClient() {
 
       if (form._id) {
         // Update client
-        await fetch(`https://fullstack-project-1-n510.onrender.com/api/clients/${form._id}`, {
+        await fetch(`https://full-stack-project-r5o9.vercel.app/api/clients/${form._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
@@ -85,7 +85,7 @@ function AddClient() {
         alert("Client Updated");
       } else {
         // Add new client
-        await fetch("https://fullstack-project-1-n510.onrender.com/api/clients", {
+        await fetch("https://full-stack-project-r5o9.vercel.app/api/clients", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),

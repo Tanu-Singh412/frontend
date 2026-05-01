@@ -1,4 +1,4 @@
-const BASE_URL = "https://fullstack-project-1-n510.onrender.com/api/vendors";
+const BASE_URL = "https://full-stack-project-r5o9.vercel.app/api/vendors";
 
 export const fetchVendors = async () => {
   const res = await fetch(BASE_URL);

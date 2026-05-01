@@ -9,7 +9,7 @@ exports.addProject = async (req, res) => {
 
 if (req.files?.images) {
   images = req.files.images.map(
-    (f) => "https://fullstack-project-1-n510.onrender.com/uploads/" + f.filename
+    (f) => "https://full-stack-project-r5o9.vercel.app/uploads/" + f.filename
   );
 }
 let dwgFile = null;
@@ -19,7 +19,7 @@ if (req.files && req.files.dwgFile) {
 
   dwgFile = {
     name: file.originalname,
-    url: "https://fullstack-project-1-n510.onrender.com/uploads/" + file.filename,
+    url: "https://full-stack-project-r5o9.vercel.app/uploads/" + file.filename,
   };
 }
     // =========================
@@ -176,7 +176,7 @@ exports.updateProject = async (req, res) => {
     let newImages = [];
     if (req.files?.images) {
       newImages = req.files.images.map(
-        (f) => "https://fullstack-project-1-n510.onrender.com/uploads/" + f.filename
+        (f) => "https://full-stack-project-r5o9.vercel.app/uploads/" + f.filename
       );
     }
 
@@ -190,7 +190,7 @@ exports.updateProject = async (req, res) => {
       const file = req.files.dwgFile[0];
       dwgFile = {
         name: file.originalname,
-        url: "https://fullstack-project-1-n510.onrender.com/uploads/" + file.filename,
+        url: "https://full-stack-project-r5o9.vercel.app/uploads/" + file.filename,
       };
     }
 
@@ -347,7 +347,7 @@ exports.addDrawing = async (req, res) => {
 
     const images = (req.files || []).map(
       (f) =>
-        `${process.env.BASE_URL || "https://fullstack-project-1-n510.onrender.com"}/uploads/${f.filename}`
+        `${process.env.BASE_URL || "https://full-stack-project-r5o9.vercel.app"}/uploads/${f.filename}`
     );
 
     if (type === "civil") {
@@ -426,7 +426,7 @@ exports.updateDrawing = async (req, res) => {
 
     const newImages = (req.files || []).map(
       (f) =>
-        `${process.env.BASE_URL || "https://fullstack-project-1-n510.onrender.com"}/uploads/${f.filename}`
+        `${process.env.BASE_URL || "https://full-stack-project-r5o9.vercel.app"}/uploads/${f.filename}`
     );
 
     if (type === "civil") {

@@ -40,7 +40,7 @@ function VendorHome() {
   const [preview, setPreview] = useState("");
 
   const fetchCategories = () => {
-    fetch("https://fullstack-project-1-n510.onrender.com/api/vendor-categories")
+    fetch("https://full-stack-project-r5o9.vercel.app/api/vendor-categories")
       .then((res) => res.json())
       .then((data) => setCategories(data));
   };
@@ -87,8 +87,8 @@ function VendorHome() {
     };
 
     const url = editId
-      ? `https://fullstack-project-1-n510.onrender.com/api/vendor-categories/${editId}`
-      : "https://fullstack-project-1-n510.onrender.com/api/vendor-categories";
+      ? `https://full-stack-project-r5o9.vercel.app/api/vendor-categories/${editId}`
+      : "https://full-stack-project-r5o9.vercel.app/api/vendor-categories";
 
     const method = editId ? "PUT" : "POST";
 
@@ -113,7 +113,7 @@ function VendorHome() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this category?")) return;
 
-    const res = await fetch(`https://fullstack-project-1-n510.onrender.com/api/vendor-categories/${id}`, {
+    const res = await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendor-categories/${id}`, {
       method: "DELETE",
     });
 

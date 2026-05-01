@@ -59,7 +59,7 @@ function VendorDetail() {
   const [whatsappMessage, setWhatsappMessage] = useState("");
 
   const fetchVendor = useCallback(() => {
-    fetch(`https://fullstack-project-1-n510.onrender.com/api/vendors/${id}`)
+    fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`)
       .then((res) => res.json())
       .then((res) => { setVendor(res.data); setPreview(res.data.image || ""); })
       .catch((err) => console.error(err));
@@ -67,8 +67,8 @@ function VendorDetail() {
 
   useEffect(() => {
     fetchVendor();
-    fetch("https://fullstack-project-1-n510.onrender.com/api/clients").then(res => res.json()).then(data => setClients(data));
-    fetch("https://fullstack-project-1-n510.onrender.com/api/vendors").then(res => res.json()).then(data => setAllVendors(data.data || data));
+    fetch("https://full-stack-project-r5o9.vercel.app/api/clients").then(res => res.json()).then(data => setClients(data));
+    fetch("https://full-stack-project-r5o9.vercel.app/api/vendors").then(res => res.json()).then(data => setAllVendors(data.data || data));
   }, [fetchVendor]);
 
   const convertToBase64 = (file) => new Promise((resolve, reject) => {
@@ -80,7 +80,7 @@ function VendorDetail() {
   const handleProfileUpdate = async () => {
     let finalImage = vendor.image;
     if (image) finalImage = await convertToBase64(image);
-    await fetch(`https://fullstack-project-1-n510.onrender.com/api/vendors/${id}`, {
+    await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...vendor, image: finalImage, materials: JSON.stringify(vendor.materials) }),
@@ -121,7 +121,7 @@ function VendorDetail() {
   // Save entire materials array (all changes at once)
   const saveRow = async (index) => {
     setSavingRow(index);
-    await fetch(`https://fullstack-project-1-n510.onrender.com/api/vendors/${id}`, {
+    await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...vendor, materials: JSON.stringify(vendor.materials) }),
@@ -136,7 +136,7 @@ function VendorDetail() {
   const deleteRow = async (index) => {
     if (!window.confirm("Delete this material?")) return;
     const updated = vendor.materials.filter((_, i) => i !== index);
-    await fetch(`https://fullstack-project-1-n510.onrender.com/api/vendors/${id}`, {
+    await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...vendor, materials: JSON.stringify(updated) }),
@@ -273,7 +273,7 @@ function VendorDetail() {
                     </>
                   )}
                   <Button variant="contained"
-                    onClick={async () => { if (window.confirm("Delete this vendor?")) { await fetch(`https://fullstack-project-1-n510.onrender.com/api/vendors/${id}`, { method: "DELETE" }); navigate("/vendor"); } }}
+                    onClick={async () => { if (window.confirm("Delete this vendor?")) { await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`, { method: "DELETE" }); navigate("/vendor"); } }}
                     sx={{ background: "#dc2626", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", px: 2, "&:hover": { opacity: 0.9 }, minWidth: 0, boxShadow: "0 6px 20px rgba(220,38,38,0.3)" }}>
                     <DeleteIcon />
                   </Button>

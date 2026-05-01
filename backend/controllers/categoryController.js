@@ -15,7 +15,7 @@ exports.addCategory = async (req, res) => {
   try {
     let image = "";
     if (req.file) {
-      image = "https://fullstack-project-1-n510.onrender.com/uploads/" + req.file.filename;
+      image = "https://full-stack-project-r5o9.vercel.app/uploads/" + req.file.filename;
     }
     const newCat = new Category({ ...req.body, image });
     await newCat.save();
@@ -30,7 +30,7 @@ exports.updateCategory = async (req, res) => {
   try {
     const updatedData = { ...req.body };
     if (req.file) {
-      updatedData.image = "https://fullstack-project-1-n510.onrender.com/uploads/" + req.file.filename;
+      updatedData.image = "https://full-stack-project-r5o9.vercel.app/uploads/" + req.file.filename;
     }
     const data = await Category.findByIdAndUpdate(req.params.id, updatedData, { new: true });
     res.json(data);

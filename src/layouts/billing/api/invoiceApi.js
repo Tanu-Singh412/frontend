@@ -1,5 +1,5 @@
 // export const BASE_URL = "http://localhost:5000/api/invoices"; // Use local during dev if needed
-export const BASE_URL = "https://fullstack-project-1-n510.onrender.com/api/invoices";
+export const BASE_URL = "https://full-stack-project-r5o9.vercel.app/api/invoices";
 export const fetchInvoices = async (search = "", filter = "all", startDate = "", endDate = "") => {
   const query = new URLSearchParams();
   if (search) query.append("search", search);

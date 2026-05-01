@@ -6,7 +6,7 @@ import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 
-const Base_API = "https://fullstack-project-1-n510.onrender.com/api";
+const Base_API = "https://full-stack-project-r5o9.vercel.app/api";
 
 function useVendorTableData() {
   const [rows, setRows] = useState([]);

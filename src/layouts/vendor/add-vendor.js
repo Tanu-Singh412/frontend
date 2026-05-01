@@ -67,17 +67,17 @@ function AddVendor() {
   const [allVendors, setAllVendors] = useState([]);
 
   useEffect(() => {
-    fetch("https://fullstack-project-1-n510.onrender.com/api/vendor-categories")
+    fetch("https://full-stack-project-r5o9.vercel.app/api/vendor-categories")
       .then((res) => res.json())
       .then((data) => setCategories(data.data || data))
       .catch((err) => console.log(err));
 
-    fetch("https://fullstack-project-1-n510.onrender.com/api/clients")
+    fetch("https://full-stack-project-r5o9.vercel.app/api/clients")
       .then((res) => res.json())
       .then((data) => setClients(data))
       .catch((err) => console.log(err));
 
-    fetch("https://fullstack-project-1-n510.onrender.com/api/vendors")
+    fetch("https://full-stack-project-r5o9.vercel.app/api/vendors")
       .then((res) => res.json())
       .then((data) => setAllVendors(data.data || data))
       .catch((err) => console.log(err));
@@ -166,7 +166,7 @@ function AddVendor() {
 
     try {
       await fetch(
-        "https://fullstack-project-1-n510.onrender.com/api/vendors",
+        "https://full-stack-project-r5o9.vercel.app/api/vendors",
         {
           method: "POST",
           body: formData,

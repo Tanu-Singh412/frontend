@@ -46,7 +46,7 @@ function AddProject() {
 
 
   useEffect(() => {
-    fetch("https://fullstack-project-1-n510.onrender.com/api/clients")
+    fetch("https://full-stack-project-r5o9.vercel.app/api/clients")
       .then((res) => res.json())
       .then((data) => setClients(data));
   }, []);
@@ -126,7 +126,7 @@ function AddProject() {
     }
 
     // CHECK UNIQUE PROJECT NAME
-    const resExisting = await fetch("https://fullstack-project-1-n510.onrender.com/api/projects");
+    const resExisting = await fetch("https://full-stack-project-r5o9.vercel.app/api/projects");
     const existingProjectsRes = await resExisting.json();
     const existingProjects = existingProjectsRes.data || existingProjectsRes;
     
@@ -163,14 +163,14 @@ function AddProject() {
 
 
     if (editData?._id) {
-      await fetch("https://fullstack-project-1-n510.onrender.com/api/projects/" + editData._id, {
+      await fetch("https://full-stack-project-r5o9.vercel.app/api/projects/" + editData._id, {
         method: "PUT",
         body: formData,
       });
 
       alert("Project Updated");
     } else {
-      await fetch("https://fullstack-project-1-n510.onrender.com/api/projects", {
+      await fetch("https://full-stack-project-r5o9.vercel.app/api/projects", {
         method: "POST",
         body: formData,
       });

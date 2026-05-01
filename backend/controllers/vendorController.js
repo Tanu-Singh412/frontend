@@ -6,7 +6,7 @@ exports.addVendor = async (req, res) => {
     const data = { ...req.body };
 
     if (req.file) {
-      data.image = "https://fullstack-project-1-n510.onrender.com/uploads/" + req.file.filename;
+      data.image = "https://full-stack-project-r5o9.vercel.app/uploads/" + req.file.filename;
     }
 
     if (data.category) {
@@ -66,7 +66,7 @@ exports.updateVendor = async (req, res) => {
     const updatedData = { ...req.body };
 
     if (req.file) {
-      updatedData.image = "https://fullstack-project-1-n510.onrender.com/uploads/" + req.file.filename;
+      updatedData.image = "https://full-stack-project-r5o9.vercel.app/uploads/" + req.file.filename;
     }
 
     if (updatedData.category) {

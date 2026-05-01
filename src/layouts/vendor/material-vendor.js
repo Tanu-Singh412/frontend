@@ -42,7 +42,7 @@ function VendorList() {
 
   const fetchVendors = useCallback(() => {
     if (!cleanCategory) return;
-    fetch(`https://fullstack-project-1-n510.onrender.com/api/vendors?category=${cleanCategory}`)
+    fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors?category=${cleanCategory}`)
       .then((res) => res.json())
       .then((res) => setVendors(res.data || []))
       .catch((err) => console.log(err));
@@ -57,7 +57,7 @@ function VendorList() {
     if (!window.confirm("Are you sure you want to delete this vendor?")) return;
 
     try {
-      const res = await fetch(`https://fullstack-project-1-n510.onrender.com/api/vendors/${id}`, {
+      const res = await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {

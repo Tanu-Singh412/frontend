@@ -32,6 +32,9 @@ export default function useClientTableData() {
   const [deleteId, setDeleteId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isSuperAdmin = user.role === "superadmin";
+
   // SEARCH LISTENER
   useEffect(() => {
     const handleSearch = (e) => setSearchTerm(e.detail.query || "");
@@ -41,6 +44,7 @@ export default function useClientTableData() {
 
   const columns = [
     { Header: "S.No.", accessor: "serial", width: "5%" },
+    ...(isSuperAdmin ? [{ Header: "Tenant", accessor: "tenant", width: "15%" }] : []),
     { Header: "Client", accessor: "client", width: "30%" },
     { Header: "Client ID", accessor: "clientId", width: "15%" },
     { Header: "Date", accessor: "date", width: "20%" },
@@ -52,7 +56,7 @@ export default function useClientTableData() {
   const loadData = useCallback(async () => {
     try {
       const res = await fetch(
-        "https://full-stack-project-r5o9.vercel.app/api/clients",
+        "http://localhost:5000/api/clients",
       );
       const data = await res.json();
       setClients(data);
@@ -71,7 +75,7 @@ export default function useClientTableData() {
     if (!clientToUpdate) return;
 
     await fetch(
-      `https://full-stack-project-r5o9.vercel.app/api/clients/${id}`,
+      `http://localhost:5000/api/clients/${id}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -84,7 +88,7 @@ export default function useClientTableData() {
   const deleteClient = async (id) => {
     try {
       await fetch(
-        `https://full-stack-project-r5o9.vercel.app/api/clients/${id}`,
+        `http://localhost:5000/api/clients/${id}`,
         {
           method: "DELETE",
         },
@@ -118,17 +122,22 @@ export default function useClientTableData() {
               <IconButton
                 size="small"
                 onClick={() => setSelectedClient(c)}
-                sx={{ ml: 1, color: "#1976d2", "&:hover": { bgcolor: "#e3f2fd" } }}
+                sx={{ ml: 1, color: "#1976d2" }}
               >
                 <AddCircleIcon fontSize="small" />
               </IconButton>
             </MDBox>
           ),
+          tenant: (
+            <MDTypography variant="caption" fontWeight="bold" color="secondary">
+              {c.tenantId?.companyName || "N/A"}
+            </MDTypography>
+          ),
 
           client: (
             <MDBox display="flex" alignItems="center">
               <Avatar sx={{ bgcolor: "#3b82f6", width: 24, height: 24, fontSize: 11, mr: 1 }}>
-                {c.name?.charAt(0).toUpperCase()}
+                {c.name?.charAt(0)?.toUpperCase()}
               </Avatar>
               <MDTypography variant="caption" fontWeight="bold" color="dark">
                 {c.name}
@@ -196,7 +205,7 @@ export default function useClientTableData() {
                 sx={{
                   bgcolor: "#f0fdf4",
                   color: "#16a34a",
-                  "&:hover": { bgcolor: "#dcfce7" },
+                  "&:hover": { bgcolor: "#f0fdf4" },
                   borderRadius: 2,
                 }}
               >
@@ -207,7 +216,7 @@ export default function useClientTableData() {
                 sx={{
                   bgcolor: "#eff6ff",
                   color: "#3b82f6",
-                  "&:hover": { bgcolor: "#dbeafe" },
+                  "&:hover": { bgcolor: "#eff6ff" },
                   borderRadius: 2,
                 }}
               >
@@ -219,7 +228,7 @@ export default function useClientTableData() {
                 sx={{
                   bgcolor: "#fef2f2",
                   color: "#ef4444",
-                  "&:hover": { bgcolor: "#fee2e2" },
+                  "&:hover": { bgcolor: "#fef2f2" },
                   borderRadius: 2,
                 }}
               >
@@ -233,10 +242,11 @@ export default function useClientTableData() {
 
   // EFFECTS
   useEffect(() => {
-    const filtered = clients.filter(c => 
-      c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.clientId?.toLowerCase().includes(searchTerm.toLowerCase())
+    const filtered = clients.filter(c =>
+      (c.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.phone || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.clientId || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.tenantId?.companyName || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
     setRows(formatRows(filtered));
   }, [clients, searchTerm, formatRows]);

@@ -15,6 +15,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import VerifiedIcon from "@mui/icons-material/Verified";
+import EmailIcon from "@mui/icons-material/Email";
 import MDBox from "components/MDBox";
 
 import { useParams, useNavigate } from "react-router-dom";
@@ -23,6 +24,7 @@ import { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
+import Swal from "sweetalert2";
 
 const AVATAR_COLORS = [
   "#fb923c",
@@ -37,12 +39,13 @@ function VendorList() {
   const { categoryId } = useParams();
   const navigate = useNavigate();
   const [vendors, setVendors] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const cleanCategory = categoryId?.trim().toLowerCase();
 
   const fetchVendors = useCallback(() => {
     if (!cleanCategory) return;
-    fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors?category=${cleanCategory}`)
+    fetch(`http://localhost:5000/api/vendors?category=${cleanCategory}`)
       .then((res) => res.json())
       .then((res) => setVendors(res.data || []))
       .catch((err) => console.log(err));
@@ -50,23 +53,46 @@ function VendorList() {
 
   useEffect(() => {
     fetchVendors();
+
+    const handleSearch = (e) => {
+      setSearchQuery(e.detail.query.toLowerCase());
+    };
+    window.addEventListener("searchChanged", handleSearch);
+    return () => window.removeEventListener("searchChanged", handleSearch);
   }, [fetchVendors]);
 
   const handleDelete = async (e, id) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to delete this vendor?")) return;
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Do you want to delete this vendor?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!"
+    });
+    if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`, {
+      const res = await fetch(`http://localhost:5000/api/vendors/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {
         fetchVendors();
+        Swal.fire("Deleted!", "Vendor has been deleted.", "success");
       }
     } catch (err) {
       console.error("Delete error:", err);
+      Swal.fire("Error!", "Something went wrong.", "error");
     }
   };
+
+  const filteredVendors = vendors.filter(v => 
+    v.vendorName?.toLowerCase().includes(searchQuery) ||
+    v.company?.toLowerCase().includes(searchQuery) ||
+    v.tenantId?.companyName?.toLowerCase().includes(searchQuery)
+  );
 
   return (
     <DashboardLayout>
@@ -103,7 +129,7 @@ function VendorList() {
                     textTransform: "none",
                     fontWeight: "bold",
                     px: 2, py: 0.8,
-                    "&:hover": { background: "rgba(255,255,255,0.35)" },
+                    "&:hover": { background: "rgba(255,255,255,0.2)" }
                   }}
                 >
                   Back
@@ -114,7 +140,7 @@ function VendorList() {
               </Typography>
               <Typography variant="body1" sx={{ color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>
                 <PeopleAltIcon sx={{ fontSize: 16, verticalAlign: "middle", mr: 0.5 }} />
-                {vendors.length} Premium Suppliers · Verified Vendors
+                {filteredVendors.length} Premium Suppliers · Verified Vendors
               </Typography>
             </Box>
 
@@ -132,12 +158,7 @@ function VendorList() {
                 fontSize: "0.95rem",
                 textTransform: "none",
                 boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-                "&:hover": {
-                  background: "#334155",
-                  transform: "translateY(-4px)",
-                  boxShadow: "0 18px 40px rgba(0,0,0,0.2)",
-                },
-                transition: "all 0.3s",
+                "&:hover": { background: "#1e293b" }
               }}
             >
               + Register Supplier
@@ -147,7 +168,7 @@ function VendorList() {
 
         {/* ========== VENDOR GRID ========== */}
         <Grid container spacing={4}>
-          {vendors.length === 0 ? (
+          {filteredVendors.length === 0 ? (
             <Box sx={{ width: "100%", textAlign: "center", py: 10 }}>
               <BusinessIcon sx={{ fontSize: 80, color: "#e2e8f0", mb: 2 }} />
               <Typography variant="h5" color="text.secondary" fontWeight="bold">No vendors found</Typography>
@@ -156,7 +177,7 @@ function VendorList() {
               </Typography>
             </Box>
           ) : (
-            vendors.map((v, idx) => {
+            filteredVendors.map((v, idx) => {
               const colorSet = AVATAR_COLORS[idx % AVATAR_COLORS.length];
               return (
                 <Grid item xs={12} sm={6} md={4} key={v._id}>
@@ -164,17 +185,10 @@ function VendorList() {
                     sx={{
                       height: "100%",
                       borderRadius: 5,
-                      transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
-                      border: "2px solid #f1f5f9",
+                      border: "1px solid #f1f5f9",
                       position: "relative",
                       overflow: "hidden",
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
-                      "&:hover": {
-                        transform: "translateY(-14px)",
-                        boxShadow: "0 30px 60px rgba(37,99,235,0.2)",
-                        borderColor: "#2563eb",
-                        "& .vendor-cta": { opacity: 1, transform: "translateY(0)" },
-                      },
+                      boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
                     }}
                   >
                     {/* Delete Button */}
@@ -185,8 +199,6 @@ function VendorList() {
                         bgcolor: "#fff",
                         color: "#dc2626",
                         boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-                        "&:hover": { bgcolor: "#fef2f2", transform: "scale(1.15)" },
-                        transition: "all 0.2s",
                         width: 36, height: 36,
                       }}
                       size="small"
@@ -222,7 +234,7 @@ function VendorList() {
                           fontSize: "1.6rem", fontWeight: "bold",
                         }}
                       >
-                        {v.vendorName?.charAt(0).toUpperCase()}
+                        {v.vendorName?.charAt(0)?.toUpperCase()}
                       </Avatar>
                     </Box>
 
@@ -234,9 +246,18 @@ function VendorList() {
                           </Typography>
                           <VerifiedIcon sx={{ fontSize: 18, color: "#2563eb" }} />
                         </Box>
-                        <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: "bold", letterSpacing: 0.5 }}>
-                          ID: {v._id?.slice(-8).toUpperCase()}
-                        </Typography>
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: "bold", letterSpacing: 0.5 }}>
+                            ID: {v._id?.slice(-8)?.toUpperCase()}
+                          </Typography>
+                          {JSON.parse(localStorage.getItem("user") || "{}").role === "superadmin" && (
+                            <Chip 
+                              label={v.tenantId?.companyName || "N/A"} 
+                              size="small" 
+                              sx={{ height: 20, fontSize: 10, bgcolor: "#f1f5f9", fontWeight: "bold" }} 
+                            />
+                          )}
+                        </Box>
                       </Box>
 
                       <Box sx={{ mb: 3, display: "flex", flexDirection: "column", gap: 1.5 }}>
@@ -245,6 +266,12 @@ function VendorList() {
                             <PhoneIcon sx={{ fontSize: 16, color: "#2563eb" }} />
                           </Box>
                           <Typography variant="body2" fontWeight="600" sx={{ color: "#334155" }}>{v.phone || "N/A"}</Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center" gap={1.5}>
+                          <Box sx={{ bgcolor: "#fef2f2", borderRadius: 2, p: 0.7, display: "flex" }}>
+                            <EmailIcon sx={{ fontSize: 16, color: "#dc2626" }} />
+                          </Box>
+                          <Typography variant="body2" fontWeight="600" sx={{ color: "#334155" }}>{v.email || "N/A"}</Typography>
                         </Box>
                         <Box display="flex" alignItems="center" gap={1.5}>
                           <Box sx={{ bgcolor: "#f0fdf4", borderRadius: 2, p: 0.7, display: "flex" }}>
@@ -288,12 +315,8 @@ function VendorList() {
                             py: 0.8,
                             textTransform: "none",
                             fontSize: "0.8rem",
-                            "&:hover": {
-                              background: "#1d4ed8",
-                              transform: "translateX(4px)",
-                            },
-                            transition: "all 0.25s",
                             boxShadow: "0 4px 15px rgba(37,99,235,0.3)",
+                            "&:hover": { background: "#2563eb" }
                           }}
                         >
                           View Profile

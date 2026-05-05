@@ -1,9 +1,6 @@
-// ==========================
-// CONFIG
-// ==========================
-const USER = "admin";
-const PASS = "123456";
-const SESSION_TIME = 60 * 60 * 1000; // 1 hour
+import Swal from "sweetalert2";
+
+const SESSION_TIME = 24 * 60 * 60 * 1000; // 24 hours
 
 // ==========================
 // PASSWORD STRENGTH CHECK
@@ -30,26 +27,39 @@ export const checkPasswordStrength = (password) => {
 // ==========================
 // LOGIN
 // ==========================
-export const login = (username, password) => {
+export const login = async (username, password) => {
   // basic validation
   if (!username || !password) {
-    alert("Please enter username and password");
+    Swal.fire("Warning", "Please enter username and password", "warning");
     return false;
   }
 
-  // check credentials
-  if (username === USER && password === PASS) {
-    const token = "fake-jwt-token-" + Date.now(); // simulate token
-    const expiry = new Date().getTime() + SESSION_TIME;
+  try {
+    const res = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: username, password }),
+    });
 
-    localStorage.setItem("auth", "true");
-    localStorage.setItem("token", token);
-    localStorage.setItem("expiry", expiry);
+    const data = await res.json();
 
-    return true;
+    if (res.ok) {
+      const expiry = new Date().getTime() + SESSION_TIME;
+
+      localStorage.setItem("auth", "true");
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data));
+      localStorage.setItem("expiry", expiry);
+
+      return true;
+    } else {
+      Swal.fire("Error", data.message || "Invalid credentials", "error");
+      return false;
+    }
+  } catch (error) {
+    Swal.fire("Error", "Server error. Please try again later.", "error");
+    return false;
   }
-
-  return false;
 };
 
 // ==========================

@@ -19,6 +19,7 @@ import CategoryIcon from "@mui/icons-material/Category";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
+import Swal from "sweetalert2";
 
 const COLORS = [
   { bg: "#fb923c", icon: "🏗️" },
@@ -38,15 +39,22 @@ function VendorHome() {
   const [name, setName] = useState("");
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchCategories = () => {
-    fetch("https://full-stack-project-r5o9.vercel.app/api/vendor-categories")
+    fetch("http://localhost:5000/api/vendor-categories")
       .then((res) => res.json())
       .then((data) => setCategories(data));
   };
 
   useEffect(() => {
     fetchCategories();
+
+    const handleSearch = (e) => {
+      setSearchQuery(e.detail.query.toLowerCase());
+    };
+    window.addEventListener("searchChanged", handleSearch);
+    return () => window.removeEventListener("searchChanged", handleSearch);
   }, []);
 
   const handleOpen = (cat = null) => {
@@ -63,66 +71,72 @@ function VendorHome() {
     setOpen(true);
   };
 
-  const convertToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
-  };
+const handleSave = async () => {
+  if (!name) return Swal.fire("Warning", "Enter category name", "warning");
 
-  const handleSave = async () => {
-    if (!name) return alert("Enter category name");
+  const formData = new FormData();
+  formData.append("name", name);
 
-    let finalImage = preview;
+  if (image) {
+    formData.append("image", image); // 🔥 actual file
+  }
 
-    if (image) {
-      finalImage = await convertToBase64(image);
-    }
+  const url = editId
+    ? `http://localhost:5000/api/vendor-categories/${editId}`
+    : "http://localhost:5000/api/vendor-categories";
 
-    const payload = {
-      name,
-      image: finalImage,
-    };
+  const method = editId ? "PUT" : "POST";
 
-    const url = editId
-      ? `https://full-stack-project-r5o9.vercel.app/api/vendor-categories/${editId}`
-      : "https://full-stack-project-r5o9.vercel.app/api/vendor-categories";
+  const res = await fetch(url, {
+    method,
+    body: formData, // ❗ no JSON header
+  });
 
-    const method = editId ? "PUT" : "POST";
-
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      fetchCategories();
-      setOpen(false);
-      setName("");
-      setImage(null);
-      setPreview("");
-      setEditId(null);
-    } else {
-      alert("Error saving category");
-    }
-  };
+  if (res.ok) {
+    fetchCategories();
+    setOpen(false);
+    setName("");
+    setImage(null);
+    setPreview("");
+    setEditId(null);
+    Swal.fire("Success", "Category saved successfully", "success");
+  } else {
+    Swal.fire("Error", "Error saving category", "error");
+  }
+};
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this category?")) return;
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You want to delete this category?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!"
+    });
 
-    const res = await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendor-categories/${id}`, {
+    if (!result.isConfirmed) return;
+
+    const res = await fetch(`http://localhost:5000/api/vendor-categories/${id}`, {
       method: "DELETE",
     });
 
     if (res.ok) {
       fetchCategories();
+      Swal.fire("Deleted!", "Category has been deleted.", "success");
     } else {
-      alert("Error deleting category");
+      Swal.fire("Error", "Error deleting category", "error");
     }
   };
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isSuperAdmin = user.role === "superadmin";
+
+  const filteredCategories = categories.filter((c) => 
+    c.name.toLowerCase().includes(searchQuery) ||
+    (c.tenantId?.companyName || "").toLowerCase().includes(searchQuery)
+  );
 
   return (
     <DashboardLayout>
@@ -177,12 +191,6 @@ function VendorHome() {
                 textTransform: "none",
                 letterSpacing: 0.5,
                 boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
-                "&:hover": {
-                  background: "#334155",
-                  transform: "translateY(-3px)",
-                  boxShadow: "0 15px 35px rgba(0,0,0,0.2)",
-                },
-                transition: "all 0.3s",
               }}
             >
               + Create Category
@@ -191,76 +199,76 @@ function VendorHome() {
         </Box>
 
         {/* ========== STATS ROW ========== */}
-<Grid container spacing={3} sx={{ mb: 4 }}>
-  {[
-    { label: "Total Categories", value: categories.length, color: "#f97316", bg: "#fff7ed", icon: <CategoryIcon /> },
-    { label: "Active Suppliers", value: categories.length * 3 + "+", color: "#2563eb", bg: "#eff6ff", icon: <StorefrontIcon /> },
-    { label: "Verified Vendors", value: categories.length * 2 + "+", color: "#16a34a", bg: "#f0fdf4", icon: <AddBusinessIcon /> },
-  ].map((s, i) => (
-    <Grid item xs={12} md={4} key={i}>
-      <Card
-        sx={{
-          p: 3,
-          borderRadius: 4,
-          background: s.bg,
-          border: `2px solid ${s.color}22`,
-          boxShadow: `0 4px 20px ${s.color}15`,
-          display: "flex",
-          flexDirection: "column",        // stack items
-          alignItems: "center",           // horizontal center
-          justifyContent: "center",       // vertical center
-          textAlign: "center",            // center text
-          gap: 1.5,
-          height: "100%",                 // equal height cards
-        }}
-      >
-        <Box
-          sx={{
-            bgcolor: s.color,
-            borderRadius: 3,
-            p: 1.5,
-            color: "#fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {s.icon}
-        </Box>
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {[
+            { label: "Total Categories", value: categories.length, color: "#f97316", bg: "#fff7ed", icon: <CategoryIcon /> },
+            { label: "Active Suppliers", value: categories.length * 3 + "+", color: "#2563eb", bg: "#eff6ff", icon: <StorefrontIcon /> },
+            { label: "Verified Vendors", value: categories.length * 2 + "+", color: "#16a34a", bg: "#f0fdf4", icon: <AddBusinessIcon /> },
+          ].map((s, i) => (
+            <Grid item xs={12} md={4} key={i}>
+              <Card
+                sx={{
+                  p: 3,
+                  borderRadius: 4,
+                  background: s.bg,
+                  border: `2px solid ${s.color}22`,
+                  boxShadow: `0 4px 20px ${s.color}15`,
+                  display: "flex",
+                  flexDirection: "column",        // stack items
+                  alignItems: "center",           // horizontal center
+                  justifyContent: "center",       // vertical center
+                  textAlign: "center",            // center text
+                  gap: 1.5,
+                  height: "100%",                 // equal height cards
+                }}
+              >
+                <Box
+                  sx={{
+                    bgcolor: s.color,
+                    borderRadius: 3,
+                    p: 1.5,
+                    color: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {s.icon}
+                </Box>
 
-        <Typography
-          variant="h4"
-          fontWeight="900"
-          sx={{ color: s.color, lineHeight: 1 }}
-        >
-          {s.value}
-        </Typography>
+                <Typography
+                  variant="h4"
+                  fontWeight="900"
+                  sx={{ color: s.color, lineHeight: 1 }}
+                >
+                  {s.value}
+                </Typography>
 
-        <Typography
-          variant="caption"
-          fontWeight="bold"
-          sx={{
-            color: "#64748b",
-            textTransform: "uppercase",
-            letterSpacing: 0.5,
-          }}
-        >
-          {s.label}
-        </Typography>
-      </Card>
-    </Grid>
-  ))}
-</Grid>
+                <Typography
+                  variant="caption"
+                  fontWeight="bold"
+                  sx={{
+                    color: "#64748b",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {s.label}
+                </Typography>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
         {/* ========== CATEGORY GRID ========== */}
-        {categories.length === 0 ? (
+        {filteredCategories.length === 0 ? (
           <Box sx={{ py: 10, textAlign: "center" }}>
             <CategoryIcon sx={{ fontSize: 80, color: "#e2e8f0", mb: 2 }} />
-            <Typography variant="h5" color="text.secondary" fontWeight="bold">No categories yet</Typography>
+            <Typography variant="h5" color="text.secondary" fontWeight="bold">No categories found</Typography>
             <Typography variant="body2" color="text.secondary">Click "Create Category" to add your first supplier category</Typography>
           </Box>
         ) : (
           <Grid container spacing={4}>
-            {categories.map((c, idx) => {
+            {filteredCategories.map((c, idx) => {
               const colorSet = COLORS[idx % COLORS.length];
               return (
                 <Grid item xs={12} sm={6} md={4} lg={3} key={c._id}>
@@ -270,17 +278,7 @@ function VendorHome() {
                       height: "100%",
                       borderRadius: 5,
                       overflow: "hidden",
-                      transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
-                      cursor: "pointer",
-                      border: "2px solid transparent",
                       boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
-                      "&:hover": {
-                        transform: "translateY(-12px)",
-                        boxShadow: "0 25px 50px rgba(0,0,0,0.15)",
-                        border: "2px solid #f97316",
-                        "& .cat-actions": { opacity: 1, transform: "translateY(0)" },
-                        "& .cat-image-overlay": { opacity: 1 },
-                      },
                     }}
                   >
                     {/* Image / Color Background */}
@@ -295,17 +293,16 @@ function VendorHome() {
                         alignItems: "center",
                         justifyContent: "center",
                         position: "relative",
+                        cursor: "pointer",
                       }}
                     >
-                      {/* Overlay on hover */}
+                      {/* Overlay */}
                       <Box
                         className="cat-image-overlay"
                         sx={{
                           position: "absolute",
                           inset: 0,
                           background: "rgba(0,0,0,0.25)",
-                          opacity: 0,
-                          transition: "0.3s",
                         }}
                       />
 
@@ -315,7 +312,7 @@ function VendorHome() {
                         </Typography>
                       )}
 
-                      {/* Action Buttons - always visible on hover */}
+                      {/* Action Buttons */}
                       <Box
                         className="cat-actions"
                         sx={{
@@ -325,9 +322,6 @@ function VendorHome() {
                           display: "flex",
                           flexDirection: "column",
                           gap: 1,
-                          opacity: 0,
-                          transform: "translateY(-10px)",
-                          transition: "all 0.3s",
                           zIndex: 10,
                         }}
                       >
@@ -337,7 +331,6 @@ function VendorHome() {
                             bgcolor: "#fff",
                             color: "#2563eb",
                             boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                            "&:hover": { bgcolor: "#eff6ff", transform: "scale(1.15)" },
                             width: 38, height: 38,
                           }}
                           onClick={(e) => { e.stopPropagation(); handleOpen(c); }}
@@ -350,7 +343,6 @@ function VendorHome() {
                             bgcolor: "#fff",
                             color: "#dc2626",
                             boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                            "&:hover": { bgcolor: "#fef2f2", transform: "scale(1.15)" },
                             width: 38, height: 38,
                           }}
                           onClick={(e) => { e.stopPropagation(); handleDelete(c._id); }}
@@ -370,13 +362,11 @@ function VendorHome() {
                           color: "#1e293b",
                           cursor: "pointer",
                           mb: 1,
-                          "&:hover": { color: "#f97316" },
-                          transition: "color 0.2s",
                         }}
                       >
                         {c.name}
                       </Typography>
-                      <Box sx={{ display: "flex", justifyContent: "center", gap: 1 }}>
+                      <Box sx={{ display: "flex", justifyContent: "center", gap: 1, flexWrap: "wrap" }}>
                         <Box sx={{
                           px: 2, py: 0.5, borderRadius: 10,
                           background: "#2563eb",
@@ -385,6 +375,16 @@ function VendorHome() {
                         }}>
                           ✓ Verified
                         </Box>
+                        {isSuperAdmin && (
+                          <Box sx={{
+                            px: 2, py: 0.5, borderRadius: 10,
+                            background: "#64748b",
+                            color: "#fff",
+                            fontSize: "10px", fontWeight: 700,
+                          }}>
+                            🏢 {c.tenantId?.companyName || "System"}
+                          </Box>
+                        )}
                       </Box>
                     </Box>
                   </Card>
@@ -439,9 +439,7 @@ function VendorHome() {
               p: 3,
               textAlign: "center",
               cursor: "pointer",
-              transition: "0.3s",
               background: "#fff7ed",
-              "&:hover": { borderColor: "#2563eb", bgcolor: "#eff6ff" },
               mb: 3,
             }}
             onClick={() => document.getElementById("cat-img").click()}
@@ -488,8 +486,6 @@ function VendorHome() {
                 fontWeight: "bold",
                 textTransform: "none",
                 fontSize: "0.95rem",
-                "&:hover": { background: "#ef4444", transform: "translateY(-2px)" },
-                transition: "all 0.25s",
                 boxShadow: "0 6px 20px rgba(220,38,38,0.3)",
               }}
             >
@@ -507,8 +503,6 @@ function VendorHome() {
                 fontWeight: "bold",
                 textTransform: "none",
                 fontSize: "0.95rem",
-                "&:hover": { background: "#ea580c", transform: "translateY(-2px)" },
-                transition: "all 0.25s",
                 boxShadow: "0 6px 20px rgba(249,115,22,0.35)",
               }}
             >

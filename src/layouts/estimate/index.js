@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Box,
   Grid,
@@ -23,6 +23,7 @@ import BusinessIcon from "@mui/icons-material/Business";
 import AspectRatioIcon from "@mui/icons-material/AspectRatio";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import Swal from "sweetalert2";
 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
@@ -35,9 +36,12 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 
-const API = "https://full-stack-project-r5o9.vercel.app/api/estimate";
+const API = "http://localhost:5000/api/estimate";
 
 export default function EstimatePage() {
+  // GET LOGGED IN USER DATA
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
   const [form, setForm] = useState({
     projectTitle: "",
     ownerName: "",
@@ -45,6 +49,15 @@ export default function EstimatePage() {
     plotArea: "",
     notes: "",
     description: "",
+    // Profile Fields
+    company: user.companyName || "Your Company",
+    address: user.address || "Your Address",
+    phone: user.phone || "Phone",
+    sellerName: user.ownerName || "",
+    specialization: user.specialization || "",
+    regNo: user.regNo || "",
+    logo: user.companyLogo || "",
+    logoFile: null,
   });
 
   const [items, setItems] = useState([
@@ -55,19 +68,23 @@ export default function EstimatePage() {
   const [editId, setEditId] = useState(null);
   const [search, setSearch] = useState("");
   /* ================= FETCH ALL ================= */
-  const loadEstimates = async () => {
+  const loadEstimates = useCallback(async () => {
     try {
-      const res = await fetch(API);
+      const res = await fetch(API, {
+        headers: {
+          "Authorization": `Bearer ${user.token}`
+        }
+      });
       const data = await res.json();
       setEstimates(data);
     } catch (err) {
       console.error("Error fetching estimates:", err);
     }
-  };
+  }, [user.token]);
 
   useEffect(() => {
     loadEstimates();
-  }, []);
+  }, [loadEstimates]);
 
   /* ================= HANDLE CHANGE ================= */
   const handleChange = (i, field, value) => {
@@ -108,17 +125,40 @@ export default function EstimatePage() {
   /* ================= SAVE / UPDATE ================= */
   const saveEstimate = async () => {
     try {
+      if (!form.projectTitle || !items[0].desc) {
+        Swal.fire("Warning", "Project Title and at least one item are required.", "warning");
+        return;
+      }
+
+      const formData = new FormData();
+      Object.keys(form).forEach(key => {
+        if (key !== 'logoFile' && key !== 'logo') {
+          formData.append(key, form[key]);
+        }
+      });
+
+      formData.append("items", JSON.stringify(items));
+      formData.append("totalEstimate", total);
+
+      if (form.logoFile) {
+        formData.append("logo", form.logoFile);
+      } else if (form.logo) {
+        formData.append("logo", form.logo);
+      }
+
       const method = editId ? "PUT" : "POST";
       const url = editId ? `${API}/${editId}` : API;
 
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, items, totalEstimate: total }),
+        headers: {
+          "Authorization": `Bearer ${user.token}`
+        },
+        body: formData,
       });
 
       if (res.ok) {
-        alert(editId ? "Updated Successfully" : "Saved Successfully");
+        Swal.fire("Success", editId ? "Updated Successfully" : "Saved Successfully", "success");
         setEditId(null);
         setForm({
           projectTitle: "",
@@ -127,29 +167,44 @@ export default function EstimatePage() {
           plotArea: "",
           notes: "",
           description: "",
+          company: user.companyName || "Your Company",
+          address: user.address || "Your Address",
+          phone: user.phone || "Phone",
+          logo: user.companyLogo || "",
+          logoFile: null,
         });
         setItems([{ sno: 1, desc: "", qty: "", unit: "", rate: "" }]);
         loadEstimates();
       } else {
-        alert("Failed to save estimate");
+        Swal.fire("Error", "Failed to save estimate", "error");
       }
     } catch (err) {
       console.error("Save error:", err);
-      alert("Error saving estimate");
+      Swal.fire("Error", "Error saving estimate", "error");
     }
   };
 
   /* ================= DELETE ================= */
   const deleteEstimate = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this estimate?"))
-      return;
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You want to delete this estimate?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!"
+    });
+    if (!result.isConfirmed) return;
     try {
       const res = await fetch(`${API}/${id}`, { method: "DELETE" });
       if (res.ok) {
         loadEstimates();
+        Swal.fire("Deleted!", "Estimate has been deleted.", "success");
       }
     } catch (err) {
       console.error("Delete error:", err);
+      Swal.fire("Error", "Error deleting estimate", "error");
     }
   };
 
@@ -168,7 +223,7 @@ export default function EstimatePage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const filteredEstimates = estimates.filter((est) =>
-    `${est.projectTitle} ${est.ownerName} ${est.totalEstimate}`
+    `${est.projectTitle} ${est.ownerName} ${est.totalEstimate} ${est.tenantId?.companyName || ""}`
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
@@ -178,43 +233,39 @@ export default function EstimatePage() {
     const pageWidth = doc.internal.pageSize.getWidth();
 
     const addHeader = () => {
-      try {
-        doc.addImage("/logo.png", "PNG", 15, 10, 22, 22);
-      } catch (e) {
-        console.error(e);
+      // LEFT: LOGO
+      if (form.logo) {
+        try {
+          doc.addImage(form.logo, "JPEG", 15, 10, 22, 22);
+        } catch (e) {
+          console.error("PDF Logo Error:", e);
+        }
       }
 
+      // CENTER: COMPANY DETAILS
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
-      doc.setTextColor(0, 0, 0); // Explicit black
-      doc.text("D DESIGN ARCHITECTS STUDIO", pageWidth / 2, 15, {
-        align: "center",
-      });
+      doc.setTextColor(0, 0, 0); 
+      doc.text(form.company.toUpperCase(), pageWidth / 2, 15, { align: "center" });
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      doc.setTextColor(0, 0, 0);
-      doc.text("Architects, Interior Designers, Planners.", pageWidth / 2, 20, {
-        align: "center",
-      });
-      doc.text(
-        "Block No.C-12, Shop No. F-6, Sanjay Place, Agra. 282002",
-        pageWidth / 2,
-        24,
-        { align: "center" },
-      );
+      doc.text("Architects, Interior Designers, Planners", pageWidth / 2, 20, { align: "center" });
+      
+      const splitAddress = doc.splitTextToSize(form.address, 100);
+      doc.text(splitAddress, pageWidth / 2, 24, { align: "center" });
 
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.text("AR. PREMVEER SINGH", pageWidth - 15, 15, { align: "right" });
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.text("(B.Arch), Regi. No.- CA/18/98236", pageWidth - 15, 20, {
-        align: "right",
-      });
-      doc.text("Email- premchak24@gmail.com", pageWidth - 15, 24, {
-        align: "right",
-      });
+      // RIGHT: OWNER/ARCHITECT INFO
+      if (form.sellerName) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text(form.sellerName.toUpperCase(), pageWidth - 15, 15, { align: "right" });
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        if (form.specialization) doc.text(form.specialization, pageWidth - 15, 20, { align: "right" });
+        if (form.regNo) doc.text(`Reg No: ${form.regNo}`, pageWidth - 15, 24, { align: "right" });
+      }
 
       doc.setDrawColor(0, 0, 0);
       doc.line(15, 35, pageWidth - 15, 35);
@@ -440,11 +491,11 @@ export default function EstimatePage() {
                     Rs.{" "}
                     {estimates.length
                       ? Math.round(
-                          estimates.reduce(
-                            (s, e) => s + (e.totalEstimate || 0),
-                            0,
-                          ) / estimates.length,
-                        ).toLocaleString("en-IN")
+                        estimates.reduce(
+                          (s, e) => s + (e.totalEstimate || 0),
+                          0,
+                        ) / estimates.length,
+                      ).toLocaleString("en-IN")
                       : 0}
                   </MDTypography>
                 </Box>
@@ -491,6 +542,43 @@ export default function EstimatePage() {
 
           {/* ================= LEFT: PROJECT INFO ================= */}
           <Grid item xs={12} lg={4}>
+            <Card sx={{ borderRadius: "16px", overflow: "hidden", mb: 3 }}>
+              <MDBox p={3} sx={{ background: "#1e293b" }} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6" fontWeight="bold" color="white">
+                  Seller Profile
+                </MDTypography>
+                <Box>
+                  <input
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    id="est-logo-upload"
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setForm({ ...form, logoFile: file, logo: URL.createObjectURL(file) });
+                      }
+                    }}
+                  />
+                  <label htmlFor="est-logo-upload">
+                    <MDButton component="span" variant="contained" color="dark" size="small">
+                      Change Logo
+                    </MDButton>
+                  </label>
+                </Box>
+              </MDBox>
+              <MDBox p={3} display="flex" flexDirection="column" gap={2}>
+                <MDBox display="flex" justifyContent="center" mb={1}>
+                  <MDBox sx={{ border: "1px solid #ddd", p: 1, borderRadius: "8px", height: "100px", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", bgcolor: "#f8f9fa" }}>
+                    {form.logo ? <img src={form.logo} alt="logo" style={{ maxHeight: "100%", maxWidth: "100%" }} /> : <MDTypography variant="caption">No Logo</MDTypography>}
+                  </MDBox>
+                </MDBox>
+                <TextField label="Company" fullWidth value={form.company} disabled />
+                <TextField label="Address" fullWidth value={form.address} disabled multiline rows={2} />
+                <TextField label="Phone" fullWidth value={form.phone} disabled />
+              </MDBox>
+            </Card>
+
             <Card sx={{ borderRadius: "16px", overflow: "hidden" }}>
               <MDBox p={3} sx={{ background: "#1e293b" }}>
                 <MDTypography variant="h6" fontWeight="bold" color="white">
@@ -792,8 +880,8 @@ export default function EstimatePage() {
                 </TableContainer>
                 <MDBox p={2} display="flex" justifyContent="center">
                   <MDButton
-                    variant="outlined"
-                    color="info"
+                    variant="contained"
+                    color="dark"
                     startIcon={<AddCircleIcon />}
                     onClick={addRow}
                     sx={{ textTransform: "none" }}
@@ -875,6 +963,16 @@ export default function EstimatePage() {
                 <DataTable
                   table={{
                     columns: [
+                      ...(user.role === "superadmin" ? [{
+                        Header: "Tenant",
+                        accessor: "tenantId.companyName",
+                        width: "15%",
+                        Cell: ({ value }) => (
+                          <MDTypography variant="caption" fontWeight="bold" color="secondary">
+                            {value || "System"}
+                          </MDTypography>
+                        ),
+                      }] : []),
                       {
                         Header: "Project",
                         accessor: "projectTitle",

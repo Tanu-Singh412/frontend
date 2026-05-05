@@ -59,6 +59,10 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
   const location = useLocation();
   const collapseName = location.pathname.replace("/", "");
   const navigate = useNavigate();
+  
+  // Get user role
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const userRole = user.role;
 
   const [openCollapse, setOpenCollapse] = useState("");
 
@@ -104,7 +108,9 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
   }, [dispatch, location, collapseName, routes, transparentSidenav, whiteSidenav]);
 
   // Render all the routes from the routes.js (All the visible items on the Sidenav)
-  const renderRoutes = routes.map(({ type, name, icon, title, noCollapse, key, href, route, children }) => {
+  const renderRoutes = routes
+    .filter((route) => !route.role || route.role === userRole) // Filter by role
+    .map(({ type, name, icon, title, noCollapse, key, href, route, children }) => {
     let returnValue;
 
     if (type === "collapse") {

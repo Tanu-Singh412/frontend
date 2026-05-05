@@ -15,6 +15,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import Footer from "examples/Footer";
+import Swal from "sweetalert2";
 
 function AddClient() {
   const navigate = useNavigate();
@@ -58,48 +59,47 @@ function AddClient() {
   const handleSubmit = async () => {
     try {
       if (!form.name || !form.phone || !form.address) {
-        alert("Name, Phone and Address are required");
+        Swal.fire("Warning", "Name, Phone and Address are required", "warning");
         return;
       }
 
       // CHECK UNIQUE NAME
-      const resExisting = await fetch("https://full-stack-project-r5o9.vercel.app/api/clients");
+      const resExisting = await fetch("http://localhost:5000/api/clients");
       const existingClients = await resExisting.json();
 
       const isDuplicate = existingClients.some(c =>
-        c.name.toLowerCase().trim() === form.name.toLowerCase().trim() && c._id !== form._id
+        (c.name || "").toLowerCase().trim() === (form.name || "").toLowerCase().trim() && c._id !== form._id
       );
 
       if (isDuplicate) {
-        alert("A client with this name already exists. Please use a unique name.");
+        Swal.fire("Error", "A client with this name already exists. Please use a unique name.", "error");
         return;
       }
 
       if (form._id) {
         // Update client
-        await fetch(`https://full-stack-project-r5o9.vercel.app/api/clients/${form._id}`, {
+        await fetch(`http://localhost:5000/api/clients/${form._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         });
-        alert("Client Updated");
+        Swal.fire("Success", "Client Updated", "success").then(() => navigate("/tables"));
       } else {
         // Add new client
-        await fetch("https://full-stack-project-r5o9.vercel.app/api/clients", {
+        await fetch("http://localhost:5000/api/clients", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         });
-        alert("Client Added");
+        Swal.fire("Success", "Client Added", "success").then(() => navigate("/tables"));
       }
 
       localStorage.setItem("Client is Updated", Date.now());
       localStorage.removeItem("editClient");
 
-      navigate("/tables"); // go back to client table
     } catch (err) {
       console.log(err);
-      alert("Something went wrong");
+      Swal.fire("Error", "Something went wrong", "error");
     }
   };
 

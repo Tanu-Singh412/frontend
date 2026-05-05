@@ -11,6 +11,7 @@ import SignIn from "layouts/authentication/sign-in";
 import ProjectDetails from "layouts/projectTables/data/project-details";
 import MaterialVendor from "layouts/vendor/material-vendor";
 import EstimatePage from "layouts/estimate";
+import Tenants from "layouts/tenants";
 import Icon from "@mui/material/Icon";
 
 const routes = [
@@ -129,6 +130,15 @@ const routes = [
     icon: <Icon fontSize="small">receipt</Icon>,
     route: "/estimate",
     component: <EstimatePage />,
+  },
+  {
+    type: "collapse",
+    name: "Tenants",
+    key: "tenants",
+    icon: <Icon fontSize="small">group</Icon>,
+    route: "/tenants",
+    component: <Tenants />,
+    role: "superadmin",
   },
 ];
 

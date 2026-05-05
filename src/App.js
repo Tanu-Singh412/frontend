@@ -53,6 +53,44 @@ import { useMaterialUIController, setMiniSidenav, setOpenConfigurator } from "co
 import brandWhite from "assets/images/logo-ct.png";
 import brandDark from "assets/images/logo-ct-dark.png";
 
+// ==========================================
+// GLOBAL FETCH INTERCEPTOR
+// ==========================================
+const originalFetch = window.fetch;
+window.fetch = async (url, options = {}) => {
+  // Only intercept requests to our backend API
+  if (typeof url === 'string' && url.includes('localhost:5000/api')) {
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+      let headers = options.headers || {};
+      
+      if (headers instanceof Headers) {
+        if (!headers.has('Authorization')) {
+          headers.append('Authorization', `Bearer ${token}`);
+        }
+      } else {
+        headers = {
+          'Authorization': `Bearer ${token}`,
+          ...headers,
+        };
+      }
+      options.headers = headers;
+    }
+  }
+  
+  const response = await originalFetch(url, options);
+  
+  // Handle 401 Unauthorized globally without full page reload
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('auth');
+  }
+  
+  return response;
+};
+
 export default function App() {
   const [controller, dispatch] = useMaterialUIController();
   const {
@@ -109,8 +147,21 @@ export default function App() {
     document.scrollingElement.scrollTop = 0;
   }, [pathname]);
 
-  const getRoutes = (allRoutes) =>
-    allRoutes.map((route) => {
+  const getRoutes = (allRoutes) => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const userRole = user.role;
+    const isAuth = localStorage.getItem("auth") === "true";
+
+    return allRoutes
+      .filter((route) => {
+        // 1. If it's a public route (like sign-in), always allow
+        if (route.route && route.route.includes("authentication")) return true;
+        // 2. If it's a restricted route, check role
+        if (route.role) return route.role === userRole;
+        // 3. Otherwise, only allow if authenticated
+        return isAuth;
+      })
+      .map((route) => {
       if (route.collapse) {
         return getRoutes(route.collapse);
       }
@@ -125,6 +176,7 @@ export default function App() {
 
       return null;
     });
+  };
 
   const configsButton = (
     <MDBox

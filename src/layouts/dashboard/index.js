@@ -71,16 +71,16 @@ function Dashboard() {
   const [counts, setCounts] = useState({ clients: 0, projects: 0, invoices: 0, vendors: 0 });
 
   useEffect(() => {
-    fetch("https://full-stack-project-r5o9.vercel.app/api/clients")
+    fetch("http://localhost:5000/api/clients")
       .then(r => r.json()).then(d => setCounts(p => ({ ...p, clients: d.length }))).catch(() => { });
 
-    fetch("https://full-stack-project-r5o9.vercel.app/api/projects")
+    fetch("http://localhost:5000/api/projects")
       .then(r => r.json()).then(d => setCounts(p => ({ ...p, projects: d.length }))).catch(() => { });
 
-    fetch("https://full-stack-project-r5o9.vercel.app/api/invoices")
+    fetch("http://localhost:5000/api/invoices")
       .then(r => r.json()).then(d => setCounts(p => ({ ...p, invoices: d.length || d.data?.length || 0 }))).catch(() => { });
 
-    fetch("https://full-stack-project-r5o9.vercel.app/api/vendors")
+    fetch("http://localhost:5000/api/vendors")
       .then(r => r.json()).then(d => setCounts(p => ({ ...p, vendors: d.length || d.data?.length || 0 }))).catch(() => { });
   }, []);
 
@@ -113,33 +113,33 @@ function Dashboard() {
                 { label: "Add Client", route: "/add-clients", color: "rgba(255,255,255,0.2)", text: "#fff" },
                 { label: "New Estimate", route: "/estimate", color: "rgba(255,255,255,0.2)", text: "#fff" },
               ].map((btn, i) => (
-<Button
-  key={i}
-  onClick={() => navigate(btn.route)}
-  endIcon={<ArrowForwardIcon />}
-  sx={{
-    bgcolor: btn.color,
-    color: btn.text,
-    fontWeight: "bold",
-    borderRadius: 3,
-    textTransform: "none",
-    px: 3,
-    py: 1,
-    transition: "all 0.25s",
+                <Button
+                  key={i}
+                  onClick={() => navigate(btn.route)}
+                  endIcon={<ArrowForwardIcon />}
+                  sx={{
+                    bgcolor: btn.color,
+                    color: btn.text,
+                    fontWeight: "bold",
+                    borderRadius: 3,
+                    textTransform: "none",
+                    px: 3,
+                    py: 1,
+                    transition: "all 0.25s",
 
-    "&:hover": {
-      bgcolor: "#000",        // ✅ BLACK HOVER
-      color: "#fff",          // white text
-      transform: "translateY(-2px)",
-      boxShadow: "0 8px 20px rgba(0,0,0,0.3)",
-      opacity: 1              // override old opacity
-    },
+                    "&:hover": {
+                      bgcolor: "#000",        // ✅ BLACK HOVER
+                      color: "#fff",          // white text
+                      transform: "translateY(-2px)",
+                      boxShadow: "0 8px 20px rgba(0,0,0,0.3)",
+                      opacity: 1              // override old opacity
+                    },
 
-    boxShadow: i === 0 ? "0 6px 20px rgba(0,0,0,0.15)" : "none",
-  }}
->
-  {btn.label}
-</Button>
+                    boxShadow: i === 0 ? "0 6px 20px rgba(0,0,0,0.15)" : "none",
+                  }}
+                >
+                  {btn.label}
+                </Button>
               ))}
             </Box>
           </Box>

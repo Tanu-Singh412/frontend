@@ -13,6 +13,7 @@ import BasicLayout from "layouts/authentication/components/BasicLayout";
 import bgImage from "assets/images/bg-sign-in-basic.jpeg";
 
 import { login, isAuthenticated } from "./auth";
+import Swal from "sweetalert2";
 
 function Basic() {
   const navigate = useNavigate();
@@ -32,20 +33,18 @@ function Basic() {
       navigate("/dashboard");
     }
   }, [navigate]);
-  const handleLogin = () => {
+  const handleLogin = async () => {
     const strength = getPasswordStrength(form.password);
 
     if (strength.label === "Weak") {
-      alert("Password is too weak");
+      Swal.fire("Warning", "Password is too weak", "warning");
       return;
     }
 
-    const success = login(form.username, form.password);
+    const success = await login(form.username, form.password);
 
     if (success) {
       navigate("/dashboard");
-    } else {
-      alert("Invalid username or password");
     }
   };
   const getPasswordStrength = (password) => {

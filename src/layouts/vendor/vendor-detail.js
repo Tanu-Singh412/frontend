@@ -34,6 +34,7 @@ import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import MDBox from "components/MDBox";
+import Swal from "sweetalert2";
 
 const ROW_COLORS = [
   { bg: "#fff7ed", border: "#fed7aa", rateColor: "#f97316" },
@@ -59,7 +60,7 @@ function VendorDetail() {
   const [whatsappMessage, setWhatsappMessage] = useState("");
 
   const fetchVendor = useCallback(() => {
-    fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`)
+    fetch(`http://localhost:5000/api/vendors/${id}`)
       .then((res) => res.json())
       .then((res) => { setVendor(res.data); setPreview(res.data.image || ""); })
       .catch((err) => console.error(err));
@@ -67,8 +68,8 @@ function VendorDetail() {
 
   useEffect(() => {
     fetchVendor();
-    fetch("https://full-stack-project-r5o9.vercel.app/api/clients").then(res => res.json()).then(data => setClients(data));
-    fetch("https://full-stack-project-r5o9.vercel.app/api/vendors").then(res => res.json()).then(data => setAllVendors(data.data || data));
+    fetch("http://localhost:5000/api/clients").then(res => res.json()).then(data => setClients(data));
+    fetch("http://localhost:5000/api/vendors").then(res => res.json()).then(data => setAllVendors(data.data || data));
   }, [fetchVendor]);
 
   const convertToBase64 = (file) => new Promise((resolve, reject) => {
@@ -80,7 +81,7 @@ function VendorDetail() {
   const handleProfileUpdate = async () => {
     let finalImage = vendor.image;
     if (image) finalImage = await convertToBase64(image);
-    await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`, {
+    await fetch(`http://localhost:5000/api/vendors/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...vendor, image: finalImage, materials: JSON.stringify(vendor.materials) }),
@@ -121,7 +122,7 @@ function VendorDetail() {
   // Save entire materials array (all changes at once)
   const saveRow = async (index) => {
     setSavingRow(index);
-    await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`, {
+    await fetch(`http://localhost:5000/api/vendors/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...vendor, materials: JSON.stringify(vendor.materials) }),
@@ -134,14 +135,25 @@ function VendorDetail() {
   };
 
   const deleteRow = async (index) => {
-    if (!window.confirm("Delete this material?")) return;
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Do you want to delete this material?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!"
+    });
+    if (!result.isConfirmed) return;
+
     const updated = vendor.materials.filter((_, i) => i !== index);
-    await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`, {
+    await fetch(`http://localhost:5000/api/vendors/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...vendor, materials: JSON.stringify(updated) }),
     });
     fetchVendor();
+    Swal.fire("Deleted!", "Material has been deleted.", "success");
   };
 
   // Add new row → immediately in edit mode
@@ -172,7 +184,7 @@ function VendorDetail() {
 
   return (
     <DashboardLayout>
-      <DashboardNavbar />
+      <DashboardNavbar pageTitle={vendor.vendorName} />
 
       <MDBox sx={{ pt: 6, pb: 4, px: 3 }}>
         {/* ====== HERO ====== */}
@@ -191,7 +203,7 @@ function VendorDetail() {
             </Typography>
           </Box>
           <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}
-            sx={{ position: "relative", zIndex: 1, bgcolor: "#1e293b", color: "#fff", borderRadius: 3, textTransform: "none", fontWeight: "bold", px: 3, py: 1.2, "&:hover": { bgcolor: "#334155" } }}>
+            sx={{ position: "relative", zIndex: 1, bgcolor: "#1e293b", color: "#fff", borderRadius: 3, textTransform: "none", fontWeight: "bold", px: 3, py: 1.2, "&:hover": { bgcolor: "#1e293b" } }}>
             Back
           </Button>
         </Box>
@@ -257,30 +269,44 @@ function VendorDetail() {
                 <Box sx={{ mt: 3, display: "flex", gap: 2 }}>
                   {!profileEditMode ? (
                     <Button fullWidth variant="contained" startIcon={<EditIcon />} onClick={() => setProfileEditMode(true)}
-                      sx={{ background: "#60a5fa", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", py: 1.3, "&:hover": { opacity: 0.9, transform: "translateY(-2px)" }, transition: "all 0.25s", boxShadow: "0 6px 20px rgba(37,99,235,0.3)" }}>
+                      sx={{ background: "#60a5fa", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", py: 1.3, transition: "all 0.25s", boxShadow: "0 6px 20px rgba(37,99,235,0.3)", "&:hover": { background: "#60a5fa" } }}>
                       Edit Profile
                     </Button>
                   ) : (
                     <>
                       <Button fullWidth variant="contained" startIcon={<SaveIcon />} onClick={handleProfileUpdate}
-                        sx={{ background: "#16a34a", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", py: 1.3, "&:hover": { opacity: 0.9 }, transition: "all 0.25s", boxShadow: "0 6px 20px rgba(22,163,74,0.3)" }}>
+                        sx={{ background: "#16a34a", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", py: 1.3, transition: "all 0.25s", boxShadow: "0 6px 20px rgba(22,163,74,0.3)", "&:hover": { background: "#16a34a" } }}>
                         Save
                       </Button>
                       <Button variant="contained" onClick={() => { setProfileEditMode(false); fetchVendor(); }}
-                        sx={{ background: "#64748b", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", px: 2, "&:hover": { opacity: 0.9 }, minWidth: 0 }}>
+                        sx={{ background: "#64748b", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", px: 2, "&:hover": { background: "#64748b" } }}>
                         <CancelIcon />
                       </Button>
                     </>
                   )}
                   <Button variant="contained"
-                    onClick={async () => { if (window.confirm("Delete this vendor?")) { await fetch(`https://full-stack-project-r5o9.vercel.app/api/vendors/${id}`, { method: "DELETE" }); navigate("/vendor"); } }}
-                    sx={{ background: "#dc2626", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", px: 2, "&:hover": { opacity: 0.9 }, minWidth: 0, boxShadow: "0 6px 20px rgba(220,38,38,0.3)" }}>
+                    onClick={async () => {
+                      const result = await Swal.fire({
+                        title: "Delete Vendor?",
+                        text: "You won't be able to revert this!",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonColor: "#d33",
+                        cancelButtonColor: "#3085d6",
+                        confirmButtonText: "Yes, delete!"
+                      });
+                      if (result.isConfirmed) {
+                        await fetch(`http://localhost:5000/api/vendors/${id}`, { method: "DELETE" });
+                        Swal.fire("Deleted!", "Vendor has been deleted.", "success").then(() => navigate("/vendor"));
+                      }
+                    }}
+                    sx={{ background: "#dc2626", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", px: 2, minWidth: 0, boxShadow: "0 6px 20px rgba(220,38,38,0.3)", "&:hover": { background: "#dc2626" } }}>
                     <DeleteIcon />
                   </Button>
                 </Box>
 
                 <Button fullWidth variant="contained" startIcon={<WhatsAppIcon />} onClick={handleOpenWhatsApp}
-                  sx={{ mt: 2, background: "#25D366", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", py: 1.3, "&:hover": { opacity: 0.9, transform: "translateY(-2px)" }, transition: "all 0.25s", boxShadow: "0 6px 20px rgba(37,211,102,0.3)" }}>
+                  sx={{ mt: 2, background: "#25D366", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", py: 1.3, transition: "all 0.25s", boxShadow: "0 6px 20px rgba(37,211,102,0.3)", "&:hover": { background: "#25D366" } }}>
                   WhatsApp Share
                 </Button>
               </Box>
@@ -304,7 +330,7 @@ function VendorDetail() {
                   </Box>
                 </Box>
                 <Button variant="contained" startIcon={<AddCircleIcon />} onClick={addMaterialRow}
-                  sx={{ background: "#fb923c", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", boxShadow: "0 6px 18px rgba(249,115,22,0.4)", "&:hover": { opacity: 0.9, transform: "translateY(-2px)" }, transition: "all 0.25s" }}>
+                  sx={{ background: "#fb923c", color: "#fff", borderRadius: 3, fontWeight: "bold", textTransform: "none", boxShadow: "0 6px 18px rgba(249,115,22,0.4)", transition: "all 0.25s", "&:hover": { background: "#fb923c" } }}>
                   Add Material
                 </Button>
               </Box>
@@ -325,8 +351,7 @@ function VendorDetail() {
                   return (
                     <Box key={i} sx={{
                       p: 3, borderRadius: 4, background: c.bg, border: `1px solid ${c.border}`,
-                      transition: "all 0.2s",
-                      "&:hover": { transform: "translateX(4px)", boxShadow: "0 4px 16px rgba(0,0,0,0.07)" },
+                      transition: "all 0.2s"
                     }}>
                       {!isEditing ? (
                         /* ---- VIEW MODE ---- */
@@ -341,21 +366,25 @@ function VendorDetail() {
                             <Chip label={m.clientName || "Direct"} size="small"
                               sx={{ background: "#60a5fa", color: "#fff", fontWeight: "bold", mt: 0.5 }} />
                           </Grid>
-                          <Grid item xs={4} md={2}>
+                          <Grid item xs={3} md={1.5}>
                             <Typography variant="caption" fontWeight="bold" sx={{ color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Rate</Typography>
                             <Typography variant="h6" fontWeight="900" sx={{ color: c.rateColor }}>₹{Number(m.rate || 0).toLocaleString("en-IN")}</Typography>
                           </Grid>
-                          <Grid item xs={4} md={2}>
+                          <Grid item xs={3} md={1.5}>
                             <Typography variant="caption" fontWeight="bold" sx={{ color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Qty</Typography>
                             <Typography variant="h6" fontWeight="900" sx={{ color: "#16a34a" }}>{m.quantity}</Typography>
                           </Grid>
-                          <Grid item xs={4} md={1} sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                          <Grid item xs={6} md={2}>
+                            <Typography variant="caption" fontWeight="bold" sx={{ color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.5 }}>Total</Typography>
+                            <Typography variant="h6" fontWeight="900" sx={{ color: "#f97316" }}>₹{(Number(m.rate || 0) * Number(m.quantity || 0)).toLocaleString("en-IN")}</Typography>
+                          </Grid>
+                          <Grid item xs={12} md={1} sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
                             <IconButton size="small" onClick={() => startEditRow(i)}
-                              sx={{ bgcolor: "#eff6ff", color: "#2563eb", "&:hover": { bgcolor: "#dbeafe", transform: "scale(1.15)" }, transition: "all 0.2s" }}>
+                              sx={{ bgcolor: "#eff6ff", color: "#2563eb" }}>
                               <EditIcon fontSize="small" />
                             </IconButton>
                             <IconButton size="small" onClick={() => deleteRow(i)}
-                              sx={{ bgcolor: "#fef2f2", color: "#dc2626", "&:hover": { bgcolor: "#fee2e2", transform: "scale(1.15)" }, transition: "all 0.2s" }}>
+                              sx={{ bgcolor: "#fef2f2", color: "#dc2626" }}>
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </Grid>
@@ -380,24 +409,28 @@ function VendorDetail() {
                                 {clients.map(c => <MenuItem key={c._id} value={c.clientId}>{c.name}</MenuItem>)}
                               </Select>
                             </Grid>
-                            <Grid item xs={5} md={2}>
+                            <Grid item xs={4} md={1.5}>
                               <TextField fullWidth type="number" label="Rate (₹)" value={m.rate}
                                 onChange={(e) => updateMaterial(i, "rate", e.target.value)}
                                 size="small" sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
                             </Grid>
-                            <Grid item xs={5} md={2}>
+                            <Grid item xs={4} md={1.5}>
                               <TextField fullWidth type="number" label="Quantity" value={m.quantity}
                                 onChange={(e) => updateMaterial(i, "quantity", e.target.value)}
                                 size="small" sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }} />
                             </Grid>
+                            <Grid item xs={4} md={2}>
+                                <Typography variant="caption" fontWeight="bold" sx={{ color: "#94a3b8", display: "block" }}>TOTAL</Typography>
+                                <Typography variant="subtitle1" fontWeight="bold" sx={{ color: "#f97316" }}>₹{(Number(m.rate || 0) * Number(m.quantity || 0)).toLocaleString("en-IN")}</Typography>
+                            </Grid>
                             <Grid item xs={12} md={2} sx={{ display: "flex", gap: 1 }}>
                               <Button fullWidth variant="contained" size="small" startIcon={<SaveIcon />}
                                 onClick={() => saveRow(i)} disabled={savingRow === i}
-                                sx={{ background: "#22c55e", color: "#fff", borderRadius: 2, fontWeight: "bold", textTransform: "none", "&:hover": { opacity: 0.9 } }}>
+                                sx={{ background: "#22c55e", color: "#fff", borderRadius: 2, fontWeight: "bold", textTransform: "none", "&:hover": { background: "#22c55e" } }}>
                                 {savingRow === i ? "..." : "Save"}
                               </Button>
                               <IconButton size="small" onClick={() => cancelEditRow(i)}
-                                sx={{ bgcolor: "#f1f5f9", color: "#64748b", "&:hover": { bgcolor: "#e2e8f0" } }}>
+                                sx={{ bgcolor: "#f1f5f9", color: "#64748b" }}>
                                 <CancelIcon fontSize="small" />
                               </IconButton>
                             </Grid>

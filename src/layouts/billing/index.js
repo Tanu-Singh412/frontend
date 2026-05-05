@@ -29,7 +29,6 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
-
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
@@ -42,19 +41,13 @@ import {
   updateInvoice,
   deleteInvoice as apiDeleteInvoice,
 } from "./api/invoiceApi";
+import Swal from "sweetalert2";
 
-/* ================= CONSTANTS ================= */
-const FIXED_COMPANY_DETAILS = {
-  company: "Go2Web Solution",
-  address: "Sanjay Place",
-  gstin: "27AAACS1234A1Z1",
-  phone: "9876543210",
-  logo: go2webLogo,
-};
+
 
 /* ================= PDF ================= */
 const downloadPDF = async (el) => {
-  if (!el) return alert("Invoice not ready");
+  if (!el) return Swal.fire("Error", "Invoice not ready", "error");
   const canvas = await html2canvas(el, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#fff" });
   const imgData = canvas.toDataURL("image/png");
   const pdf = new jsPDF("p", "mm", "a4");
@@ -116,12 +109,31 @@ Invoice.propTypes = { data: PropTypes.object.isRequired, totals: PropTypes.objec
 export default function InvoicePage() {
   const pdfRef = useRef();
   const navigate = useNavigate();
+  
+  // GET LOGGED IN USER DATA
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
   const [invoices, setInvoices] = useState([]);
-  const [deleteId, setDeleteId] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
-  const [data, setData] = useState({ _id: null, logo: FIXED_COMPANY_DETAILS.logo, billingName: "", email: "", company: FIXED_COMPANY_DETAILS.company, address: FIXED_COMPANY_DETAILS.address, gstin: FIXED_COMPANY_DETAILS.gstin, phone: FIXED_COMPANY_DETAILS.phone, invoiceNo: "", date: new Date().toISOString().split("T")[0], billingGstin: "", sgst: 9, cgst: 9, items: [{ name: "", hsn: "", qty: 1, price: 0 }] });
+
+  const [data, setData] = useState({ 
+    _id: null, 
+    logo: user.companyLogo || go2webLogo, 
+    billingName: "", 
+    email: "", 
+    company: user.companyName || "Your Company", 
+    address: user.address || "Your Address", 
+    gstin: user.gstNumber || "GSTIN", 
+    phone: user.phone || "Phone", 
+    invoiceNo: "", 
+    date: new Date().toISOString().split("T")[0], 
+    billingGstin: "", 
+    sgst: 9, 
+    cgst: 9, 
+    items: [{ name: "", hsn: "", qty: 1, price: 0 }] 
+  });
 
   const subtotal = data.items.reduce((s, i) => s + i.qty * i.price, 0);
   const sgstAmount = (subtotal * data.sgst) / 100;
@@ -134,10 +146,16 @@ export default function InvoicePage() {
       const response = await fetchInvoices(search, filter);
       if (response.success) {
         setInvoices(response.data);
-        if (response.data.length > 0 && !data._id && !data.invoiceNo) {
-          const numbers = response.data.map(inv => parseInt(inv.invoiceNo?.replace(/[^0-9]/g, ''))).filter(n => !isNaN(n));
+        
+        // AUTO GENERATE INVOICE NO PREVIEW (if not editing)
+        if (!data._id && !data.invoiceNo) {
+          const numbers = response.data.map(inv => {
+            const match = inv.invoiceNo?.match(/\d+/);
+            return match ? parseInt(match[0]) : 0;
+          }).filter(n => n > 0);
+          
           const nextNo = numbers.length > 0 ? Math.max(...numbers) + 1 : 1001;
-          setData(prev => ({ ...prev, invoiceNo: prev.invoiceNo || `INV-${String(nextNo).padStart(4, '0')}` }));
+          setData(prev => ({ ...prev, invoiceNo: `INV-${nextNo}` }));
         }
       }
     } catch (err) { console.error(err); }
@@ -147,17 +165,66 @@ export default function InvoicePage() {
 
   const handleSaveAndDownload = async () => {
     if (!data.billingName || !data.invoiceNo || !data.items[0].name) {
-      alert("Please fill in all mandatory fields: Billing Name, Invoice No, and at least one Item Name.");
+      Swal.fire("Warning", "Please fill in all mandatory fields: Billing Name, Invoice No, and at least one Item Name.", "warning");
       return;
     }
-    const payload = { ...data, clientName: data.billingName, invoiceName: data.billingName, clientGstin: data.billingGstin, total: Number(totals.total) };
-    delete payload._id; delete payload.createdAt; delete payload.updatedAt; delete payload.__v;
-    let res = data._id ? await updateInvoice(data._id, payload) : await createInvoice(payload);
-    if (res.success) { loadInvoices(); downloadPDF(pdfRef.current); setData(prev => ({ ...prev, _id: null, billingName: "", invoiceNo: "" })); }
+
+    const formData = new FormData();
+    formData.append("invoiceName", data.billingName);
+    formData.append("billingName", data.billingName);
+    formData.append("email", data.email || "");
+    formData.append("billingGstin", data.billingGstin || "");
+    formData.append("clientGstin", data.billingGstin || ""); // For backend model
+    formData.append("invoiceNo", data.invoiceNo);
+    formData.append("date", data.date);
+    formData.append("company", data.company);
+    formData.append("address", data.address);
+    formData.append("phone", data.phone);
+    formData.append("gstin", data.gstin);
+    formData.append("sgst", data.sgst);
+    formData.append("cgst", data.cgst);
+    formData.append("items", JSON.stringify(data.items));
+    formData.append("total", Number(totals.total));
+
+    if (data.logoFile) {
+      formData.append("logo", data.logoFile);
+    } else if (data.logo) {
+      formData.append("logo", data.logo);
+    }
+
+    try {
+      let res = data._id 
+        ? await updateInvoice(data._id, formData) 
+        : await createInvoice(formData);
+
+      if (res.success) { 
+        loadInvoices(); 
+        // Update data with new logo URL if returned
+        if (res.data.logo) {
+          setData(prev => ({ ...prev, logo: res.data.logo }));
+        }
+        setTimeout(() => downloadPDF(pdfRef.current), 500); 
+        setData(prev => ({ ...prev, _id: null, billingName: "", invoiceNo: "" })); 
+      }
+    } catch (error) {
+      console.error(error);
+      Swal.fire("Error", "Could not save invoice", "error");
+    }
   };
 
-  const handleDelete = async () => {
-    try { await apiDeleteInvoice(deleteId); setDeleteId(null); loadInvoices(); } catch (err) { console.error(err); }
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!"
+    });
+    if (result.isConfirmed) {
+      try { await apiDeleteInvoice(id); loadInvoices(); Swal.fire("Deleted!", "Invoice has been deleted.", "success"); } catch (err) { console.error(err); Swal.fire("Error", "Could not delete invoice.", "error"); }
+    }
   };
 
   const handleDownloadExisting = async (inv) => {
@@ -200,7 +267,7 @@ export default function InvoicePage() {
           <Grid item xs={12}>
             <MDBox display="flex" justifyContent="space-between" alignItems="center" p={3} sx={{ background: "linear-gradient(90deg, #1e293b, #334155)", borderRadius: "16px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
               <MDTypography variant="h4" fontWeight="bold" color="white">Billing Management</MDTypography>
-              <MDButton variant="contained" color="info" startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>Back</MDButton>
+              <MDButton variant="contained" color="info" startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} sx={{ "&:hover": { bgcolor: "#1A73E8" } }}>Back</MDButton>
             </MDBox>
           </Grid>
 
@@ -212,10 +279,45 @@ export default function InvoicePage() {
               </MDBox>
               <MDBox p={4}>
                 <Grid container spacing={3}>
+                  {/* SELLER DETAILS (READ-ONLY) */}
+                  <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
+                    <MDTypography variant="h6" fontWeight="bold">Seller Details (From Profile)</MDTypography>
+                    <Box>
+                      <input
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        id="logo-upload"
+                        type="file"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setData({ ...data, logoFile: file, logo: URL.createObjectURL(file) });
+                          }
+                        }}
+                      />
+                      <label htmlFor="logo-upload">
+                        <MDButton component="span" variant="contained" color="dark" size="small" sx={{ "&:hover": { bgcolor: "#1e293b" } }}>
+                          Upload Invoice Logo
+                        </MDButton>
+                      </label>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={2}>
+                    <MDBox sx={{ border: "1px solid #ddd", p: 1, borderRadius: "8px", height: "80px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                      {data.logo ? <img src={data.logo} alt="logo" style={{ maxHeight: "100%", maxWidth: "100%" }} /> : <MDTypography variant="caption">No Logo</MDTypography>}
+                    </MDBox>
+                  </Grid>
+                  <Grid item xs={12} sm={3}><TextField fullWidth label="Company" value={data.company} disabled /></Grid>
+                  <Grid item xs={12} sm={3}><TextField fullWidth label="GSTIN" value={data.gstin} disabled /></Grid>
+                  <Grid item xs={12} sm={4}><TextField fullWidth label="Address" value={data.address} disabled /></Grid>
+
+                  <Grid item xs={12}><MDTypography variant="h6" fontWeight="bold" mt={2}>Recipient Details</MDTypography></Grid>
                   <Grid item xs={12} sm={4}><TextField required fullWidth label="Billing Name" variant="outlined" value={data.billingName} onChange={(e) => setData({ ...data, billingName: e.target.value })} inputProps={{ style: { color: '#000', fontWeight: 600 } }} /></Grid>
                   <Grid item xs={12} sm={4}><TextField fullWidth label="Email" variant="outlined" value={data.email} onChange={(e) => setData({ ...data, email: e.target.value })} /></Grid>
                   <Grid item xs={12} sm={4}><TextField fullWidth label="GSTIN" variant="outlined" value={data.billingGstin} onChange={(e) => setData({ ...data, billingGstin: e.target.value })} /></Grid>
-                  <Grid item xs={12} sm={3}><TextField required fullWidth label="Invoice No" value={data.invoiceNo} onChange={(e) => setData({ ...data, invoiceNo: e.target.value })} /></Grid>
+                  
+                  <Grid item xs={12}><MDTypography variant="h6" fontWeight="bold" mt={2}>Invoice Details</MDTypography></Grid>
+                  <Grid item xs={12} sm={3}><TextField required fullWidth label="Invoice No" value={data.invoiceNo} InputProps={{ readOnly: true }} helperText="Auto-generated" /></Grid>
                   <Grid item xs={12} sm={3}><TextField required fullWidth label="Date" type="date" InputLabelProps={{ shrink: true }} value={data.date} onChange={(e) => setData({ ...data, date: e.target.value })} /></Grid>
                   <Grid item xs={12} sm={3}><TextField fullWidth label="SGST %" type="number" value={data.sgst} onChange={(e) => setData({ ...data, sgst: Number(e.target.value) })} /></Grid>
                   <Grid item xs={12} sm={3}><TextField fullWidth label="CGST %" type="number" value={data.cgst} onChange={(e) => setData({ ...data, cgst: Number(e.target.value) })} /></Grid>
@@ -231,14 +333,14 @@ export default function InvoicePage() {
                         <Grid item xs={12} sm={2}><IconButton color="error" onClick={() => { const items = data.items.filter((_, idx) => idx !== i); setData({ ...data, items }); }} disabled={data.items.length === 1}><DeleteIcon /></IconButton></Grid>
                       </Grid>
                     ))}
-                    <Button startIcon={<AddIcon />} onClick={() => setData({ ...data, items: [...data.items, { name: "", hsn: "", qty: 1, price: 0 }] })}>Add Item</Button>
+                    <MDButton variant="text" color="info" startIcon={<AddIcon />} onClick={() => setData({ ...data, items: [...data.items, { name: "", hsn: "", qty: 1, price: 0 }] })} sx={{ "&:hover": { background: "transparent", color: "#1A73E8" } }}>Add Item</MDButton>
                   </Grid>
                 </Grid>
                 <Box mt={4} display="flex" justifyContent="space-between" alignItems="center" p={3} sx={{ bgcolor: "#f8f9fa", borderRadius: "12px" }}>
                   <MDTypography variant="h5" fontWeight="bold" color="dark">Total Amount: ₹{totals.total}</MDTypography>
                   <Box display="flex" gap={2}>
-                    <Button variant="outlined" onClick={() => setPreviewOpen(true)} startIcon={<VisibilityIcon />} sx={{ color: "#000", borderColor: "#000", fontWeight: "bold" }}>Preview</Button>
-                    <MDButton variant="contained" color="success" onClick={handleSaveAndDownload} startIcon={<DownloadIcon />}>Save & Download</MDButton>
+                    <Button variant="outlined" onClick={() => setPreviewOpen(true)} startIcon={<VisibilityIcon />} sx={{ color: "#000", borderColor: "#000", fontWeight: "bold", "&:hover": { background: "transparent", borderColor: "#000" } }}>Preview</Button>
+                    <MDButton variant="contained" color="success" onClick={handleSaveAndDownload} startIcon={<DownloadIcon />} sx={{ "&:hover": { bgcolor: "#4CAF50" } }}>Save & Download</MDButton>
                   </Box>
                 </Box>
               </MDBox>
@@ -262,8 +364,18 @@ export default function InvoicePage() {
               <MDBox pb={3}>
                 <DataTable table={{
                   columns: [
-                    { Header: "Invoice No", accessor: "invoiceNo", width: "20%" },
-                    { Header: "Recipient", accessor: "invoiceName", width: "35%" },
+                    ...(user.role === "superadmin" ? [{
+                      Header: "Tenant",
+                      accessor: "tenantId.companyName",
+                      width: "15%",
+                      Cell: ({ value }) => (
+                        <MDTypography variant="caption" fontWeight="bold" color="secondary">
+                          {value || "System"}
+                        </MDTypography>
+                      ),
+                    }] : []),
+                    { Header: "Invoice No", accessor: "invoiceNo", width: "15%" },
+                    { Header: "Recipient", accessor: "invoiceName", width: "30%" },
                     { Header: "Date", accessor: "date", width: "15%", Cell: ({ value, row }) => new Date(value || row.original.createdAt).toLocaleDateString() },
                     { Header: "Amount", accessor: "total", width: "15%", Cell: ({ value }) => <MDTypography variant="button" fontWeight="bold" color="success">₹{value?.toLocaleString("en-IN")}</MDTypography> },
                     {
@@ -271,7 +383,7 @@ export default function InvoicePage() {
                         <Box display="flex" gap={1}>
                           <IconButton color="info" size="small" onClick={() => { setData({ ...data, ...row.original, billingName: row.original.invoiceName, date: new Date(row.original.date || row.original.createdAt).toISOString().split("T")[0] }); setPreviewOpen(true); }}><VisibilityIcon fontSize="small" /></IconButton>
                           <IconButton color="success" size="small" onClick={() => handleDownloadExisting(row.original)}><DownloadIcon fontSize="small" /></IconButton>
-                          <IconButton color="error" size="small" onClick={() => setDeleteId(row.original._id)}><DeleteIcon fontSize="small" /></IconButton>
+                          <IconButton color="error" size="small" onClick={() => handleDelete(row.original._id)}><DeleteIcon fontSize="small" /></IconButton>
                         </Box>
                       )
                     }
@@ -285,7 +397,6 @@ export default function InvoicePage() {
       </MDBox>
       <Footer />
       {/* Dialogs */}
-      <Dialog open={!!deleteId} onClose={() => setDeleteId(null)}><DialogTitle>Confirm Delete</DialogTitle><DialogContent>Are you sure?</DialogContent><DialogActions><Button onClick={() => setDeleteId(null)}>Cancel</Button><Button variant="contained" color="error" onClick={handleDelete}>Delete</Button></DialogActions></Dialog>
       <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth><DialogTitle>Preview</DialogTitle><DialogContent dividers sx={{ bgcolor: "#f5f5f5", display: "flex", justifyContent: "center", p: 4 }}><Paper elevation={3}><Invoice data={data} totals={totals} /></Paper></DialogContent><DialogActions><Button onClick={() => setPreviewOpen(false)}>Close</Button><MDButton variant="contained" color="success" onClick={() => { handleSaveAndDownload(); setPreviewOpen(false); }}>Save & Download</MDButton></DialogActions></Dialog>
       <div style={{ position: "absolute", left: "-9999px", top: 0 }}><Invoice ref={pdfRef} data={data} totals={totals} /></div>
     </DashboardLayout>

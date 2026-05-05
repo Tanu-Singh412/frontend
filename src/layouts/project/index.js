@@ -5,9 +5,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import TextField from "@mui/material/TextField";
-import IconButton from "@mui/material/IconButton";
 
-import DeleteIcon from "@mui/icons-material/Delete";
 
 // Dashboard
 import MDBox from "components/MDBox";
@@ -19,6 +17,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 
 import { useNavigate, useLocation } from "react-router-dom";
+import Swal from "sweetalert2";
 
 function AddProject() {
   const navigate = useNavigate();
@@ -40,13 +39,12 @@ function AddProject() {
     visitCounter: 5,
   });
 
-  const [images, setImages] = useState([]);
 
   const [clients, setClients] = useState([]);
 
 
   useEffect(() => {
-    fetch("https://full-stack-project-r5o9.vercel.app/api/clients")
+    fetch("http://localhost:5000/api/clients")
       .then((res) => res.json())
       .then((data) => setClients(data));
   }, []);
@@ -61,19 +59,13 @@ function AddProject() {
         clientName: editData.clientName || "",
         clientId: editData.clientId || "",
         description: editData.description || "",
-        totalAmount: editData.totalAmount || "",
-        advanceAmount: editData.advanceAmount || "",
-        balance: editData.balance || "",
-        visitCounter: editData.visitCounter || 5,
+        totalAmount: editData.totalAmount !== undefined && editData.totalAmount !== null ? String(editData.totalAmount) : "",
+        advanceAmount: editData.advanceAmount !== undefined && editData.advanceAmount !== null ? String(editData.advanceAmount) : "",
+        balance: editData.balance !== undefined && editData.balance !== null ? String(editData.balance) : "",
+        visitCounter: editData.visitCounter !== undefined && editData.visitCounter !== null ? editData.visitCounter : 5,
       });
 
-      if (editData.images) {
-        setImages(
-          editData.images.map((url) => ({
-            url,
-          }))
-        );
-      }
+
     }
   }, [editData]);
 
@@ -98,87 +90,67 @@ function AddProject() {
   };
 
   // =====================
-  // UPLOAD IMAGE
-  // =====================
-
-
-
-  // =====================
-  // DELETE IMAGE
-  // =====================
-
-  const removeImage = (index) => {
-    const newList = [...images];
-
-    newList.splice(index, 1);
-
-    setImages(newList);
-  };
-
-  // =====================
   // SAVE
   // =====================
 
   const handleSubmit = async () => {
-    if (!form.projectName || !form.clientId || !form.totalAmount) {
-      alert("Project Name, Associated Client, and Total Amount are required");
+    if (!form.projectName) {
+      Swal.fire("Warning", "Project Name is required", "warning");
+      return;
+    }
+    if (!form.clientId && !form.clientName) {
+      Swal.fire("Warning", "Please select an Associated Client", "warning");
       return;
     }
 
     // CHECK UNIQUE PROJECT NAME
-    const resExisting = await fetch("https://full-stack-project-r5o9.vercel.app/api/projects");
+    const resExisting = await fetch("http://localhost:5000/api/projects");
     const existingProjectsRes = await resExisting.json();
     const existingProjects = existingProjectsRes.data || existingProjectsRes;
-    
-    const isDuplicate = existingProjects.some(p => 
-      p.projectName.toLowerCase().trim() === form.projectName.toLowerCase().trim() && p._id !== editData?._id
+
+    const isDuplicate = existingProjects.some(p =>
+      (p.projectName || "").toLowerCase().trim() === (form.projectName || "").toLowerCase().trim() && p._id !== editData?._id
     );
 
     if (isDuplicate) {
-      alert("A project with this name already exists. Please use a unique name.");
+      Swal.fire("Error", "A project with this name already exists. Please use a unique name.", "error");
       return;
     }
 
-    const formData = new FormData();
-
-    // form fields
-    Object.keys(form).forEach((key) => {
-      formData.append(key, form[key]);
-    });
-
-    // images
-    // ✅ Send existing image URLs
-    const existingImages = images
-      .filter((img) => !img.file) // old images
-      .map((img) => img.url);
-
-    formData.append("existingImages", JSON.stringify(existingImages));
-
-    // ✅ Send new files
-    images.forEach((img) => {
-      if (img.file) {
-        formData.append("images", img.file);
-      }
-    });
-
+    const payload = {
+      projectName: form.projectName,
+      clientName: form.clientName,
+      clientId: form.clientId,
+      description: form.description,
+      totalAmount: Number(form.totalAmount) || 0,
+      visitCounter: Number(form.visitCounter) || 5,
+    };
 
     if (editData?._id) {
-      await fetch("https://full-stack-project-r5o9.vercel.app/api/projects/" + editData._id, {
+      await fetch("http://localhost:5000/api/projects/" + editData._id, {
         method: "PUT",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      alert("Project Updated");
+      Swal.fire("Success", "Project Updated", "success").then(() => {
+        navigate("/projectTables");
+      });
     } else {
-      await fetch("https://full-stack-project-r5o9.vercel.app/api/projects", {
+      // For new project, also send advanceAmount
+      if (form.advanceAmount) {
+        payload.advanceAmount = Number(form.advanceAmount) || 0;
+      }
+      await fetch("http://localhost:5000/api/projects", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      alert("Project Successfully Added");
+      Swal.fire("Success", "Project Successfully Added", "success").then(() => {
+        navigate("/projectTables");
+      });
     }
-
-    navigate("/projectTables");
   };
 
   // =====================
@@ -203,7 +175,7 @@ function AddProject() {
                 borderRadius="lg"
               >
                 <MDTypography variant="h6" color="white">
-                  Add Project
+                  {editData ? "Edit Project" : "Add Project"}
                 </MDTypography>
               </MDBox>
 
@@ -347,45 +319,20 @@ function AddProject() {
                       </label>
                     </div>
                   </Grid> */}
-                  {/* Preview */}
 
-                  <Grid item xs={12}>
-                    <Grid container spacing={2}>
-                      {images.map((img, index) => (
-                        <Grid item key={index}>
-                          <MDBox position="relative">
-                            <img src={img.url} width="120" height="100" alt={`Project ${index + 1}`} />
-
-                            <IconButton
-                              color="error"
-                              size="small"
-                              onClick={() => removeImage(index)}
-                              style={{
-                                position: "absolute",
-                                top: 0,
-                                right: 0,
-                              }}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </MDBox>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Grid>
 
                   {/* Save */}
 
                   <Grid item xs={12} display="flex" justifyContent="center">
-                    <MDButton 
-                      variant="contained" 
-                      sx={{ 
-                        px: 6, 
+                    <MDButton
+                      variant="contained"
+                      sx={{
+                        px: 6,
                         py: 1.5,
-                        background: "#1e293b", 
+                        background: "#1e293b",
                         color: "#fff",
                         "&:hover": { background: "#334155" }
-                      }} 
+                      }}
                       onClick={handleSubmit}
                     >
                       Save Project

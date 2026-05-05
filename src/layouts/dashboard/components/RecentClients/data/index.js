@@ -21,7 +21,7 @@ export default function useRecentClients(limit = 5) {
       [id]: value,
     }));
 
-    await fetch("https://full-stack-project-r5o9.vercel.app/api/clients/" + id, {
+    await fetch("http://localhost:5000/api/clients/" + id, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -34,9 +34,16 @@ export default function useRecentClients(limit = 5) {
 
   useEffect(() => {
     const fetchData = async () => {
-      const res = await fetch("https://full-stack-project-r5o9.vercel.app/api/clients");
+      const res = await fetch("http://localhost:5000/api/clients");
 
       const data = await res.json();
+
+      // ✅ SAFETY CHECK: Ensure data is an array
+      if (!Array.isArray(data)) {
+        console.error("Expected array but got:", data);
+        setRows([]);
+        return;
+      }
 
       // ✅ SORT BY DATE (NEWEST FIRST)
       const sorted = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

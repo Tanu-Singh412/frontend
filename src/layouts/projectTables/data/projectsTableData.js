@@ -28,6 +28,9 @@ export default function useProjectData() {
   const target = params.get("target");
   const [deleteId, setDeleteId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isSuperAdmin = user.role === "superadmin";
 
   // SEARCH LISTENER
   useEffect(() => {
@@ -40,6 +43,7 @@ export default function useProjectData() {
 
   const columns = [
     { Header: "S.No.", accessor: "serial", width: "5%" },
+    ...(isSuperAdmin ? [{ Header: "Tenant", accessor: "tenant", width: "15%" }] : []),
     { Header: "Project", accessor: "project", width: "25%" },
     { Header: "Client", accessor: "client", width: "20%" },
     { Header: "Total", accessor: "total", width: "15%" },
@@ -58,7 +62,7 @@ export default function useProjectData() {
   const handleStatusChange = useCallback(async (id, value) => {
     setProjects((prev) => prev.map((p) => (p._id === id ? { ...p, status: value } : p)));
 
-    await fetch(`https://full-stack-project-r5o9.vercel.app/api/projects/${id}`, {
+    await fetch(`http://localhost:5000/api/projects/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: value }),
@@ -67,14 +71,19 @@ export default function useProjectData() {
 
   // Load projects from backend
   const loadData = useCallback(async () => {
-    const res = await fetch("https://full-stack-project-r5o9.vercel.app/api/projects");
+    const res = await fetch("http://localhost:5000/api/projects");
     const data = await res.json();
-    setProjects(data);
+    if (Array.isArray(data)) {
+      setProjects(data);
+    } else {
+      console.error("Projects API error:", data);
+      setProjects([]);
+    }
   }, []);
 
   // Delete project
   const deleteProject = useCallback(async (id) => {
-    await fetch(`https://full-stack-project-r5o9.vercel.app/api/projects/${id}`, {
+    await fetch(`http://localhost:5000/api/projects/${id}`, {
       method: "DELETE",
     });
     loadData();
@@ -87,6 +96,11 @@ export default function useProjectData() {
 
       return {
         serial: <MDTypography variant="caption" fontWeight="bold" sx={{ color: "#3b82f6" }}>{i + 1}</MDTypography>,
+        tenant: (
+          <MDTypography variant="caption" fontWeight="bold" color="secondary">
+            {p.tenantId?.companyName || "N/A"}
+          </MDTypography>
+        ),
 
         project: (
           <MDBox display="flex" alignItems="center">
@@ -106,7 +120,7 @@ export default function useProjectData() {
                 boxShadow: "0 2px 6px rgba(16, 185, 129, 0.15)"
               }}
             >
-              {p.projectName?.charAt(0).toUpperCase()}
+              {p.projectName?.charAt(0)?.toUpperCase()}
             </MDBox>
             <MDBox>
               <MDTypography variant="caption" fontWeight="bold" display="block" sx={{ color: "#1e293b" }}>
@@ -157,132 +171,149 @@ export default function useProjectData() {
           </MDBox>
         ),
 
-        status: (
-          <Select
-            size="small"
-            value={currentStatus}
-            onChange={(e) => handleStatusChange(p._id, e.target.value)}
-            sx={{
-              fontSize: 11,
-              height: 28,
-              minWidth: 100,
-              borderRadius: 2,
-              fontWeight: "bold",
-              bgcolor:
-                currentStatus === "Pending" ? "#fef2f2" :
-                  currentStatus === "Running" ? "#eff6ff" :
-                    currentStatus === "Assigned" ? "#fff7ed" : "#f0fdf4",
-              color:
-                currentStatus === "Pending" ? "#dc2626" :
-                  currentStatus === "Running" ? "#2563eb" :
-                    currentStatus === "Assigned" ? "#ea580c" : "#16a34a",
-              "& fieldset": {
-                borderColor: "transparent",
-              },
-              "&:hover fieldset": {
-                borderColor: "transparent",
-              },
-              "&.Mui-focused fieldset": {
-                borderColor: "transparent",
-              },
-              "&.Mui-disabled fieldset": {
-                borderColor: "none" },
-            }
-            }
-              >
-            <MenuItem value="Pending">Pending</MenuItem>
-            <MenuItem value="Running">Running</MenuItem>
-            <MenuItem value="Assigned">Assigned</MenuItem>
-            <MenuItem value="Completed">Completed</MenuItem>
-          </Select >
+        status: (() => {
+          const statusConfig = {
+            Pending: { bg: "#f59e0b", hover: "#d97706", label: "Pending" },
+            Running: { bg: "#3b82f6", hover: "#2563eb", label: "Running" },
+            Assigned: { bg: "#8b5cf6", hover: "#7c3aed", label: "Assigned" },
+            Completed: { bg: "#10b981", hover: "#059669", label: "Completed" },
+          };
+          const cfg = statusConfig[currentStatus] || statusConfig.Pending;
+          return (
+            <Select
+              size="small"
+              value={currentStatus}
+              onChange={(e) => handleStatusChange(p._id, e.target.value)}
+              sx={{
+                fontSize: 11,
+                height: 30,
+                minWidth: 110,
+                borderRadius: "20px",
+                fontWeight: "700",
+                bgcolor: cfg.bg,
+                color: "#fff !important",
+                letterSpacing: "0.5px",
+                "& .MuiSelect-select": { color: "#fff !important", py: "4px" },
+                "& .MuiSelect-icon": { color: "#fff !important" },
+                "& fieldset": { border: "none" },
+                "&:hover": { bgcolor: cfg.bg },
+                "&:hover fieldset": { border: "none" },
+                "&.Mui-focused fieldset": { border: "none" },
+                transition: "background 0.2s",
+              }}
+            >
+              <MenuItem value="Pending">🟡 Pending</MenuItem>
+              <MenuItem value="Running">🔵 Running</MenuItem>
+              <MenuItem value="Assigned">🟣 Assigned</MenuItem>
+              <MenuItem value="Completed">🟢 Completed</MenuItem>
+            </Select>
+          );
+        })(),
+
+        actions: (
+          <MDBox display="flex" gap={0.5} alignItems="center">
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => {
+                const tabMap = { drawings: 1, accounts: 2, scope: 3 };
+                const tab = tabMap[target] || 0;
+                navigate(`/project-details/${p._id}?tab=${tab}`, { state: p });
+              }}
+              sx={{
+                textTransform: "none",
+                fontSize: "10px",
+                px: 1.5,
+                py: 0.5,
+                bgcolor: "#6366f1",
+                color: "#fff",
+                borderRadius: "8px",
+                fontWeight: "bold",
+                boxShadow: "none",
+                "&:hover": { bgcolor: "#6366f1", boxShadow: "0 4px 12px rgba(99,102,241,0.4)", transform: "translateY(-1px)" },
+                transition: "all 0.2s",
+              }}
+            >
+              Details
+            </Button>
+
+            <IconButton
+              size="small"
+              onClick={() => editProject(p)}
+              sx={{
+                color: "#2563eb",
+                bgcolor: "#eff6ff",
+                borderRadius: "8px",
+                p: "5px",
+                "&:hover": { bgcolor: "#eff6ff", color: "#2563eb", boxShadow: "0 4px 12px rgba(37,99,235,0.4)", transform: "translateY(-1px)" },
+                transition: "all 0.2s",
+              }}
+            >
+              <EditIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+
+            <IconButton
+              size="small"
+              onClick={() => setDeleteId(p._id)}
+              sx={{
+                color: "#dc2626",
+                bgcolor: "#fef2f2",
+                borderRadius: "8px",
+                p: "5px",
+                "&:hover": { bgcolor: "#fef2f2", color: "#dc2626", boxShadow: "0 4px 12px rgba(220,38,38,0.4)", transform: "translateY(-1px)" },
+                transition: "all 0.2s",
+              }}
+            >
+              <DeleteIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+          </MDBox>
         ),
-
-  actions: (
-    <MDBox display="flex" gap={0.5}>
-      <Button
-        variant="contained"
-        size="small"
-        onClick={() => {
-          const tabMap = { drawings: 1, accounts: 2, scope: 3 };
-          const tab = tabMap[target] || 0;
-          navigate(`/project-details/${p._id}?tab=${tab}`, { state: p });
-        }}
-        sx={{
-          textTransform: "none",
-          fontSize: "10px",
-          px: 1,
-          py: 0.3,
-          bgcolor: "#6366f1",
-          color: "#fff",
-          borderRadius: 1.5,
-          '&:hover': { bgcolor: "#6366f1" }
-        }}
-      >
-        Details
-      </Button>
-
-      <IconButton
-        size="small"
-        onClick={() => editProject(p)}
-        sx={{ color: "#3b82f6", bgcolor: "#eff6ff", borderRadius: 1.5 }}
-      >
-        <EditIcon fontSize="inherit" />
-      </IconButton>
-
-      <IconButton
-        size="small"
-        onClick={() => setDeleteId(p._id)}
-        sx={{ color: "#ef4444", bgcolor: "#fef2f2", borderRadius: 1.5 }}
-      >
-        <DeleteIcon fontSize="inherit" />
-      </IconButton>
-    </MDBox>
-  ),
       };
     });
   }, [editProject, handleStatusChange, navigate, target]);
 
-// Update rows whenever projects or search term changes
-useEffect(() => {
-  const filtered = projects.filter(p =>
-    p.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.projectId?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  setRows(formatRows(filtered));
-}, [projects, searchTerm, formatRows]);
+  // Update rows whenever projects or search term changes
+  useEffect(() => {
+    const filtered = projects.filter(p =>
+      (p.projectName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.clientName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.projectId || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.tenantId?.companyName || "").toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setRows(formatRows(filtered));
+  }, [projects, searchTerm, formatRows]);
 
-// Initial load
-useEffect(() => {
-  loadData();
-}, [loadData]);
+  // Initial load
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-return {
-  columns,
-  rows,
-  dialog: (
-    <>
-      {/* Delete Confirmation */}
-      <Dialog open={!!deleteId} onClose={() => setDeleteId(null)} PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <WarningAmberIcon color="error" /> Delete Project
-        </DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete this project? All associated data will be lost.
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setDeleteId(null)}>Cancel</Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={() => { deleteProject(deleteId); setDeleteId(null); }}
-            sx={{ borderRadius: 2, color: "#fff" }}
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
-  )
-};
+  return {
+    columns,
+    rows,
+    dialog: (
+      <>
+        {/* Delete Confirmation */}
+        <Dialog open={!!deleteId} onClose={() => setDeleteId(null)} PaperProps={{ sx: { borderRadius: 3 } }}>
+          <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <WarningAmberIcon color="error" /> Delete Project
+          </DialogTitle>
+          <DialogContent>
+            Are you sure you want to delete this project? All associated data will be lost.
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={() => setDeleteId(null)}>Cancel</Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => { deleteProject(deleteId); setDeleteId(null); }}
+              sx={{ borderRadius: 2, color: "#fff", bgcolor: "red" }}
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </>
+    )
+  };
 }

@@ -1,4 +1,4 @@
-const BASE_URL = "https://full-stack-project-r5o9.vercel.app/api/vendors";
+const BASE_URL = "http://localhost:5000/api/vendors";
 
 export const fetchVendors = async () => {
   const res = await fetch(BASE_URL);
@@ -23,6 +23,6 @@ export const updateVendor = async (id, data) => {
 
 export const deleteVendor = async (id) => {
   return fetch(`${BASE_URL}/${id}`, {
-    method: "DELETE" 
+    method: "DELETE"
   });
 };

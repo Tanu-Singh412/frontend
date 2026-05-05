@@ -20,7 +20,7 @@ function Tables() {
 
   return (
     <DashboardLayout>
-      <DashboardNavbar />
+      <DashboardNavbar pageTitle="Client Table" />
 
       <MDBox pt={6} pb={3} px={2}>
         <Grid container spacing={4}>

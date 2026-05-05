@@ -6,26 +6,35 @@ import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 
-const Base_API = "https://full-stack-project-r5o9.vercel.app/api";
+const Base_API = "http://localhost:5000/api";
 
 function useVendorTableData() {
   const [rows, setRows] = useState([]);
   const navigate = useNavigate();
 
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isSuperAdmin = user.role === "superadmin";
+
   useEffect(() => {
     fetch(`${Base_API}/vendors`)
       .then((res) => res.json())
       .then((data) => {
-        const formattedRows = (data.data || data).map((v, i) => ({
+        const rawData = data.data || data;
+        const formattedRows = rawData.map((v, i) => ({
           serial: (
             <Typography variant="caption" fontWeight="bold" sx={{ color: "#3b82f6" }}>
               {i + 1}
             </Typography>
           ),
+          tenant: (
+            <Typography variant="caption" fontWeight="bold" color="secondary">
+              {v.tenantId?.companyName || "N/A"}
+            </Typography>
+          ),
           vendorName: (
             <Box display="flex" alignItems="center">
               <Avatar sx={{ bgcolor: "#3b82f6", width: 24, height: 24, fontSize: 11, mr: 1 }}>
-                {v.vendorName?.charAt(0).toUpperCase()}
+                {v.vendorName?.charAt(0)?.toUpperCase()}
               </Avatar>
               <Typography variant="caption" fontWeight="bold">
                 {v.vendorName}
@@ -70,15 +79,17 @@ function useVendorTableData() {
         console.error("Vendor fetch error:", err);
         setRows([]);
       });
-  }, []);
+  }, [navigate]);
 
   const columns = [
     { Header: "S.No.", accessor: "serial", width: "5%" },
-    { Header: "Vendor", accessor: "vendorName", width: "25%" },
+    ...(isSuperAdmin ? [{ Header: "Tenant", accessor: "tenant", width: "15%" }] : []),
+    { Header: "Vendor", accessor: "vendorName", width: "20%" },
     { Header: "Phone", accessor: "phone", width: "15%" },
+    { Header: "Email", accessor: "email", width: "15%" },
     { Header: "Company", accessor: "company", width: "20%" },
     { Header: "Registration", accessor: "date", width: "20%" },
-    { Header: "Action", accessor: "action", width: "15%" },
+    { Header: "Action", accessor: "action", width: "10%" },
   ];
 
   return {
